@@ -5,6 +5,10 @@ on:
   schedule:
     - cron: '41 19 * * *'
   workflow_dispatch:
+  # בכל שינוי בקוד הסנכרון: ריצה מיד, בלי לחכות ללילה.
+  push:
+    branches: [main]
+    paths: ['scripts/sync_plans.py', '.github/workflows/sync-plans.yml']
 permissions:
   contents: write
 concurrency:
