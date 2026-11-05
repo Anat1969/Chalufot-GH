@@ -15,6 +15,9 @@ npm test
 npm run build && node tests/e2e.cjs
 ```
 
+## נתונים
+התכניות מתעדכנות כל לילה ב-GitHub Actions (`sync-plans`) מתואם מתאר ומ"מה נבנה סביבי". הרצה ידנית: Actions, sync-plans, Run workflow.
+
 ## מבנה
 - `src/lib/rules.ts` מנוע הכללים של תואם מתאר, ללא שינוי.
 - `src/lib/massing.ts` המחולל, `src/lib/verify.ts` הבודק, `src/lib/site.ts` המגרשים.

@@ -3,6 +3,7 @@ import { Iso, PlanView, Section, isoBounds } from '../components/Drawings';
 import Rich, { fmt, pct } from '../components/Rich';
 import Stamp from '../components/Stamp';
 import HowTo from '../components/HowTo';
+import PlanMap from '../components/PlanMap';
 import { requestBrief, type Brief } from '../lib/ai';
 import type { AltKey } from '../lib/massing';
 import { CERTAINTY_LABEL, STATUS_LABEL } from '../lib/rules';
@@ -212,6 +213,10 @@ function Detail({ v, all, s }: { v: Verified; all: Verified[]; s: ReturnType<typ
       <p className="crumbs">{s.site.label} · {s.mode === 'mitar' ? 'מותאם למתאר' : 'כמו בתכנית'}</p>
       <h1 className="detail-title"><bdi>{ALT_LETTER[v.alt.key]}.</bdi> {v.alt.name}: {VERDICT_LABEL[v.verdict]}</h1>
       <Rich as="p" className="detail-sub">{`${v.alt.thesis} **${fmt(v.alt.units)}** יח"ד, **${v.alt.maxFloors}** קומות, **${Math.round(v.alt.heightM)}** מ'.`}</Rich>
+      {s.lot !== 'custom' && (
+        <PlanMap planId={s.plan.id} checked={sitesOf(s.plan).map((x) => ({ id: x.id }))} selected={s.site.id} site={s.site} alt={v.alt} onPick={(l) => s.setLot(l)} height={250}
+          label={`תשריט ${s.plan.number}: ${s.site.label} ונפחי ${v.alt.name}`} />
+      )}
       <div className="drawings">
         <Section site={s.site} alt={v.alt} />
         <PlanView site={s.site} alt={v.alt} />
