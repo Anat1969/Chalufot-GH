@@ -48,6 +48,8 @@ export default function Method() {
         <li><strong>מסמך מדיניות עירונית תכנונית</strong>, טיוטה 09/2026, פרקים 2, 4, 6, 7.</li>
         <li><strong>מנגנון תועלות ציבוריות</strong>, 05/2024, עדכון 07/2025.</li>
         <li><strong>תמל/2022</strong> 603-0380584: טבלה 5, טבלת שטחים וקובץ SHP ממבא"ת, דרך תואם מתאר.</li>
+        <li><strong>603-0811588</strong>, קריית שמעון פרס: טבלה 5 (עמ' 13 עד 16) ומעטפות KML מתכנון זמין, דרך <a href="https://ashdod-ma-nivne.vercel.app/" target="_blank" rel="noreferrer">"מה נבנה סביבי"</a>. 33 מגרשים, כולל שטח עיקרי ותמהיל.</li>
+        <li><strong>16 מתחמי התחדשות</strong>: גבול ויח"ד מתוכננות מ"מה נבנה סביבי". אין טבלת זכויות, ולכן נבדק <strong>מגרש מייצג</strong>: 60% מהמתחם נטו, כ-4,000 מ"ר למגרש, 122 מ"ר ברוטו ליח"ד כמו בתמל/2022. שטח ציבורי לא ידוע מסומן "חסר".</li>
         <li><strong>מנוע הכללים</strong>: <a href="https://github.com/Anat1969/AshdodMitar/blob/main/src/lib/rules.ts" target="_blank" rel="noreferrer">AshdodMitar/src/lib/rules.ts</a>, מועתק כמו שהוא.</li>
         <li><strong>רעיון המחולל</strong>: <a href="https://appofapp-gh.vercel.app/" target="_blank" rel="noreferrer">תיק העבודות</a>, "מחולל חלופות בינוי".</li>
       </ul>

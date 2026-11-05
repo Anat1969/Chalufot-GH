@@ -55,7 +55,7 @@ export const ASSUMPTION_TEXT: [string, string][] = [
   ['גובה קומה', `${ASSUMPTIONS.floorM} מ', קומת קרקע ${ASSUMPTIONS.groundFloorM} מ'`],
   ['קווי בניין', `${ASSUMPTIONS.setbackM} מ' מכל גבול, במגרש מוכלל למלבן שקול`],
   ['עומק אגף', `${ASSUMPTIONS.barDepthM} מ' בבלוק ובלוחות`],
-  ['עיקרי מתוך ברוטו', `${ASSUMPTIONS.netToGross * 100}% לחישוב תמהיל`],
+  ['עיקרי מתוך ברוטו', `${ASSUMPTIONS.netToGross * 100}% לחישוב תמהיל, כשטבלה 5 לא מפרטת עיקרי ושירות`],
   ['דירה קטנה ובינונית', `${ASSUMPTIONS.smallUnitNet} ו-${ASSUMPTIONS.mediumUnitNet} מ"ר נטו`],
   ['בניין רב קומות', `מעל ${ASSUMPTIONS.highRiseM} מ', לפי הגדרת תקנות התכנון והבנייה`],
   ['מרתף מתחת למגרש', 'מגדל 80%, בלוק 75% (החצר לא נחפרת), לוחות 70%'],
@@ -103,30 +103,40 @@ export function program(site: Site, mode: Mode, capOverride?: number | null): Pr
       const before = p.units;
       p.units = Math.floor(p.residentialM2 / g);
       p.publicM2 = need;
-      p.adjustments.push(`שטח ציבורי הועלה ל-**${need.toLocaleString('he-IL')}** מ"ר (5.5%) על חשבון מגורים: **${before - p.units}** יח"ד פחות`);
+      p.adjustments.push(`שטח ציבורי ${site.publicKnown ? 'הועלה' : 'נקבע'} ל-**${need.toLocaleString('he-IL')}** מ"ר (5.5%) על חשבון מגורים: **${before - p.units}** יח"ד פחות`);
     }
   }
-  const avgNet = (p.residentialM2 * ASSUMPTIONS.netToGross) / p.units;
-  if (avgNet > MAX_AVG_NET) {
+  const ratio = site.netToGross ?? ASSUMPTIONS.netToGross;
+  const net = p.residentialM2 * ratio;
+  if (calcMix(p.units, net, PARAMS.mix.smallShare, PARAMS.mix.mediumShare).restAvgArea > 125) {
     const before = p.units;
-    p.units = Math.ceil((p.residentialM2 * ASSUMPTIONS.netToGross) / MAX_AVG_NET);
+    p.units = Math.ceil(net / MAX_AVG_NET);
+    while (calcMix(p.units, net, PARAMS.mix.smallShare, PARAMS.mix.mediumShare).restAvgArea > 125) p.units++;
     p.adjustments.push(`דירות קטנות יותר לתמהיל תקין: **${p.units - before}+** יח"ד באותו שטח`);
   }
   return p;
 }
 
 /** תמהיל: נקודת פתיחה לפי טיפוס, ואם ממוצע היתרה גדול מדי יורדים אל המינימום (20% קטנות, 10% בינוניות). */
-function mixFor(key: AltKey, units: number, residentialM2: number) {
-  const net = residentialM2 * ASSUMPTIONS.netToGross;
-  const calc = (sS: number, sM: number) => {
-    const small = Math.ceil(units * sS);
-    const medium = Math.ceil(units * sM);
-    const rest = Math.max(units - small - medium, 0);
-    const restAvgArea = rest ? Math.round((net - small * ASSUMPTIONS.smallUnitNet - medium * ASSUMPTIONS.mediumUnitNet) / rest) : 0;
-    return { small, medium, rest, restAvgArea };
-  };
+function calcMix(units: number, net: number, sS: number, sM: number) {
+  const small = Math.ceil(units * sS);
+  const medium = Math.ceil(units * sM);
+  const rest = Math.max(units - small - medium, 0);
+  const restAvgArea = rest ? Math.round((net - small * ASSUMPTIONS.smallUnitNet - medium * ASSUMPTIONS.mediumUnitNet) / rest) : 0;
+  return { small, medium, rest, restAvgArea };
+}
+
+function mixFor(key: AltKey, units: number, residentialM2: number, ratio: number) {
+  const net = residentialM2 * ratio;
+  const calc = (sS: number, sM: number) => calcMix(units, net, sS, sM);
   const first = calc(...ASSUMPTIONS.mixShares[key]);
   return first.restAvgArea <= 125 ? first : calc(PARAMS.mix.smallShare, PARAMS.mix.mediumShare);
+}
+
+/** תמהיל כפי שהוא בטבלה 5 של התכנית: הקטנות והבינוניות מהטבלה, והיתרה מחושבת מהשטח העיקרי. */
+function planMixOf(m: { small: number; medium: number }, units: number, net: number) {
+  const rest = Math.max(units - m.small - m.medium, 0);
+  return { small: m.small, medium: m.medium, rest, restAvgArea: rest ? Math.round((net - m.small * ASSUMPTIONS.smallUnitNet - m.medium * ASSUMPTIONS.mediumUnitNet) / rest) : 0 };
 }
 
 /** הדירה הממוצעת הגדולה ביותר (נטו) שעוד מאפשרת תמהיל תקין במינימום. */
@@ -156,7 +166,7 @@ function finish(key: AltKey, name: string, thesis: string, mode: Mode, site: Sit
     percolationM2: Math.round(Math.min(open, site.areaM2 * (1 - ASSUMPTIONS.basementShare[key]))),
     effectiveGreenM2: Math.round(open * ASSUMPTIONS.softShareOfOpen),
     greenRoofM2: Math.round(Math.max(roofs, 0) * ASSUMPTIONS.greenRoofShare[key]),
-    mix: mixFor(key, units, p.residentialM2),
+    mix: mode === 'rights' && site.planMix ? planMixOf(site.planMix, units, p.residentialM2 * (site.netToGross ?? ASSUMPTIONS.netToGross)) : mixFor(key, units, p.residentialM2, site.netToGross ?? ASSUMPTIONS.netToGross),
     adjustments: p.adjustments,
     notes,
   };

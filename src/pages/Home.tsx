@@ -3,8 +3,8 @@ import { Iso, isoBounds } from '../components/Drawings';
 import Rich, { fmt, pct } from '../components/Rich';
 import Stamp from '../components/Stamp';
 import { go } from '../lib/route';
-import { PLAN } from '../lib/site';
-import { ALT_LETTER, allLots, bestOf } from '../lib/studio';
+import { PLAN, PLANS } from '../lib/site';
+import { ALT_LETTER, allLots, keepBest } from '../lib/studio';
 
 export default function Home() {
   const lots = useMemo(allLots, []);
@@ -15,7 +15,7 @@ export default function Home() {
     const byType = (['A', 'B', 'C'] as const).map((k) => ({ k, name: lots[0].mitar.find((v) => v.alt.key === k)!.alt.name, n: lots.filter((l) => l.mitar.find((v) => v.alt.key === k)!.verdict !== 'fail').length }));
     const lead = [...byType].sort((a, b) => b.n - a.n)[0];
     const units = lots.reduce((a, l) => a + l.site.units, 0);
-    const kept = lots.reduce((a, l) => a + bestOf(l.mitar).alt.units, 0);
+    const kept = lots.reduce((a, l) => a + keepBest(l.mitar).alt.units, 0);
     const fails = new Map<string, { t: string; n: number }>();
     flat('rights').forEach((v) => v.blocking.forEach((r) => fails.set(r.id, { t: r.title, n: (fails.get(r.id)?.n ?? 0) + 1 })));
     const topFail = [...fails.values()].sort((a, b) => b.n - a.n)[0];
@@ -29,10 +29,10 @@ export default function Home() {
         <div className="hero-text rise">
           <p className="eyebrow">מחולל חלופות בינוי + תואם מתאר</p>
           <h1 className="hero-h1"><Rich>{`**${stats.lead.name}** עובר בדיקה ב-${stats.lead.n} מתוך ${lots.length} מגרשים.`}</Rich></h1>
-          <p className="hero-sub">כל חלופת נפח יוצאת מהמחולל עם <strong>חותמת</strong>.<br />12 בדיקות של תואם מתאר, לכל אחת מקור ורמת ודאות.<br />בדיקה על <strong>{PLAN.name}</strong>, ציר הרצל-המעפילים, <strong>אשדוד</strong> <span className="latin">Ashdod</span>.</p>
+          <p className="hero-sub">כל חלופת נפח יוצאת מהמחולל עם <strong>חותמת</strong>.<br />12 בדיקות של תואם מתאר, לכל אחת מקור ורמת ודאות.<br />הדוגמה: <strong>{PLAN.name}</strong>, ציר הרצל-המעפילים, <strong>אשדוד</strong> <span className="latin">Ashdod</span>.<br />ועוד <strong>{PLANS.length - 1}</strong> תכניות מתואם מתאר ומ"מה נבנה סביבי", לבחירה בסטודיו.</p>
           <div className="hero-cta">
             <button className="press btn btn-primary" onClick={() => go('/studio', { lot: hero.site.id })}>פתיחת הסטודיו</button>
-            <button className="press btn" onClick={() => go('/compare')}>כל המגרשים</button>
+            <button className="press btn" onClick={() => go('/compare')}>כל {PLANS.length} התכניות</button>
           </div>
         </div>
         <div className="hero-fig rise" style={{ animationDelay: '120ms' }} aria-label={`שלוש חלופות ל${hero.site.label}`}>
