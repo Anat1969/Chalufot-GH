@@ -3,5 +3,5 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ':(exclude)app'"
+  "ignoreCommand": "git rev-parse -q --verify HEAD^ >/dev/null && git diff --quiet HEAD^ HEAD -- . ':(exclude)app'"
 }
