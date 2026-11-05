@@ -20,6 +20,7 @@ async function page(b, opts = {}) {
   const p = await b.newPage({ viewport: { width: 1440, height: 900 }, ...opts });
   await p.route('**/appofapp-gh.vercel.app/ai-menu.js', (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: MENU }));
   await p.route('**/fonts.googleapis.com/**', (r) => r.abort());
+  await p.route('**/basemaps.cartocdn.com/**', (r) => r.abort());
   return p;
 }
 
@@ -85,6 +86,19 @@ async function page(b, opts = {}) {
     await p.reload({ waitUntil: 'networkidle' });
     ok((await p.locator('.detail-title').innerText()).includes('בלוק היקפי') && (await p.locator('.detail .crumbs').innerText()).includes('102'), 'המצב נשמר בכתובת אחרי רענון');
 
+    // התשריט: המגרש הנבדק ונפחי החלופה במקום האמיתי
+    await p.locator('.planmap svg').waitFor({ timeout: 5000 });
+    ok(await p.locator('.planmap .pm-land').count() === 37, 'תשריט תמל/2022: 37 תאי שטח מה-SHP');
+    ok(await p.locator('.planmap .pm-land.is-sel').count() === 1, 'התשריט מסמן את המגרש הנבדק');
+    ok(await p.locator('.planmap .pm-alt').count() >= 2, 'נפחי החלופה מוצגים על המגרש');
+    ok(await p.locator('.planmap .pm-demolish').count() > 10, 'מבנים להריסה מוצגים');
+    await p.locator('.pm-zoom').getByRole('button', { name: 'כל התכנית' }).click();
+    ok(await p.locator('.pm-zoom [aria-pressed="true"]').innerText() === 'כל התכנית', 'בורר "כל התכנית"');
+    await p.locator('.planmap .pm-land.is-pick').nth(4).dispatchEvent('click');
+    await p.waitForFunction(() => /lot=10[0-9]/.test(location.hash) && !location.hash.includes('lot=102'), null, { timeout: 4000 }).catch(() => {});
+    ok(/lot=10[13-9]/.test(p.url()), 'לחיצה על מגרש בתשריט בוחרת אותו (' + p.url().split('?')[1] + ')');
+    await p.goto(BASE + '#/studio?plan=tml-2022&lot=102&mode=mitar&alt=B', { waitUntil: 'networkidle' });
+
     // בחירת תכנית בסטודיו
     await p.getByLabel('תכנית', { exact: true }).selectOption('603-0811588');
     await p.waitForFunction(() => location.hash.includes('plan=603-0811588'));
@@ -95,10 +109,12 @@ async function page(b, opts = {}) {
     ok((await p.locator('.matrix tbody tr', { hasText: 'R04' }).locator('td.st').first().innerText()) === 'חסר', 'שטח ציבורי לא ידוע: חסר, לא כישלון');
     await p.locator('.actionbar').getByRole('button', { name: 'מותאם למתאר' }).click();
     ok(await p.locator('.alt .stamp.v-pass').count() >= 1, 'בקריית שמעון פרס יש חלופה שעומדת בלי תנאי');
-    await p.getByLabel('תכנית', { exact: true }).selectOption('תמל-2021');
-    await p.waitForFunction(() => location.hash.includes('plan=%D7%AA%D7%9E%D7%9C-2021') || location.hash.includes('plan=תמל-2021'));
+    await p.getByLabel('תכנית', { exact: true }).selectOption('tml-2021');
+    await p.waitForFunction(() => location.hash.includes('plan=tml-2021'));
     ok((await p.locator('.lots .lot').first().innerText()).includes('מגרש מייצג'), 'מתחם: מגרש מייצג');
     ok((await p.locator('.studio .kpi-i').nth(2).innerText()).includes('בכל המתחם'), 'מתחם: מחיר העמידה מוכפל לכל המתחם');
+    await p.locator('.planmap svg').waitFor({ timeout: 5000 });
+    ok(await p.locator('.planmap .pm-rep').count() === 1 && await p.locator('.planmap .pm-boundary').count() >= 1, 'מתחם: גבול המתחם והמגרש המייצג בתשריט');
     await p.goto(BASE + '#/studio?plan=tml-2022&lot=102&mode=mitar&alt=B', { waitUntil: 'networkidle' });
 
     // ניסוח לוועדה
@@ -133,7 +149,7 @@ async function page(b, opts = {}) {
     await p.locator('.tabs').getByRole('button', { name: 'השוואה' }).click();
     await p.waitForFunction(() => location.hash.startsWith('#/compare'));
     ok(await p.locator('.gl-cell').count() === 21, 'השוואה: 21 חלופות');
-    ok(await p.locator('.chart-card .chart-insight').count() === 4, 'השוואה: תובנה מחושבת מתחת לכל גרף');
+    ok(await p.locator('.chart-card .chart-insight').count() === 5, 'השוואה: תובנה מחושבת מתחת לכל גרף');
     ok(await p.locator('.plans-table tbody tr').count() === 18, 'השוואה: טבלה של 18 תכניות');
     ok(/מתוך 18 תכניות/.test(await p.locator('h1').innerText()), 'השוואה: כותרת על כל התכניות');
     await p.getByRole('button', { name: 'כמו בתכנית' }).click();
@@ -141,6 +157,9 @@ async function page(b, opts = {}) {
     await p.locator('.plans-table tbody tr', { hasText: '603-0811588' }).click();
     await p.waitForFunction(() => location.hash.includes('plan=603-0811588'));
     ok(await p.locator('.gl-cell').count() === 99, 'בחירת תכנית בטבלה: 33 מגרשים, 99 חלופות');
+    await p.locator('.compare-side .planmap svg').waitFor({ timeout: 5000 });
+    ok(await p.locator('.compare-side .pm-bld.pm-existing').count() > 100, 'תשריט 603-0811588: בניינים קיימים מקובץ KML');
+    ok(await p.locator('.compare-side .pm-land.is-checked').count() === 33, 'תשריט ההשוואה: 33 מגרשים צבועים בתוצאה');
     await p.locator('.plans-table tbody tr', { hasText: 'תמל/2022' }).click();
     await p.waitForFunction(() => location.hash.includes('plan=tml-2022'));
     await p.locator('.gl-cell').nth(4).click();

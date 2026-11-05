@@ -3,9 +3,10 @@ import { Iso, isoBounds } from '../components/Drawings';
 import Rich, { fmt, pct } from '../components/Rich';
 import Stamp from '../components/Stamp';
 import HowTo from '../components/HowTo';
+import PlanMap from '../components/PlanMap';
 import { go, setParams, useRoute } from '../lib/route';
 import { ALT_LETTER, allLots, allSummaries, keepBest } from '../lib/studio';
-import { DEFAULT_PLAN, LEVEL_LABEL, planById } from '../lib/site';
+import { DEFAULT_PLAN, LEVEL_LABEL, PLANS_DATA, planById } from '../lib/site';
 
 export default function Compare() {
   const { q } = useRoute();
@@ -35,7 +36,7 @@ export default function Compare() {
       <div className="page-head">
         <div>
           <h1 className="page-title"><Rich>{`${okPlans} מתוך ${sums.length} תכניות עוברות בדיקה אחרי התאמה.`}</Rich></h1>
-          <p className="page-sub">כל התכניות שבאפליקציות, שלוש חלופות לכל מגרש, אותן 12 בדיקות. תמונת מצב מ-05.11.2026.</p>
+          <p className="page-sub">כל התכניות שבאפליקציות, שלוש חלופות לכל מגרש, אותן 12 בדיקות. תמונת מצב מ-{new Date(PLANS_DATA.snapshot).toLocaleDateString('he-IL')}, מתעדכנת כל לילה.</p>
         </div>
         <div className="head-tools">
           <div className="chips" role="group" aria-label="בסיס הזכויות">
@@ -97,6 +98,12 @@ export default function Compare() {
       </section>
 
       <div className="compare-side">
+        <section className="chart-card">
+          <h3>איפה בתכנית החלופה עוברת?</h3>
+          <Rich as="p" className="chart-insight">{`כל מגרש נצבע בתוצאת החלופה ששומרת הכי הרבה דירות, ${mode === 'mitar' ? 'אחרי התאמה' : 'כמו בתכנית'}. לחיצה על מגרש פותחת אותו.`}</Rich>
+          <PlanMap planId={plan.id} height={300} checked={lots.map((l) => ({ id: l.site.id, verdict: keepBest(l[mode]).verdict }))}
+            onPick={(lot) => go('/studio', { plan: plan.id, lot, mode })} label={`תשריט ${plan.number} עם תוצאות הבדיקה`} />
+        </section>
         <section className="chart-card">
           <h3>כמה דירות עולה העמידה במתאר בכל מגרש?</h3>
           <Rich as="p" className="chart-insight">{`==${pct(lostAll / planAll)} מהדירות== יורדות כדי לעמוד. הכי יקר: **${worst.label}**, מ-**${fmt(worst.plan)}** ל-**${fmt(worst.fit)}**.`}</Rich>

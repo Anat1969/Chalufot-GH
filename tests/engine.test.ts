@@ -76,7 +76,7 @@ describe('plans from the other apps', () => {
     expect(sitesOf(planById('603-0811588')).length).toBe(33);
   });
   it('a compound becomes representative lots that add back to the plan', () => {
-    const p = planById('תמל-2021');
+    const p = planById('tml-2021');
     const s = sitesOf(p)[0];
     expect(s.repeat).toBe(p.repeat);
     expect(Math.abs(s.units * s.repeat - p.unitsPlanned)).toBeLessThanOrEqual(s.repeat);
@@ -97,5 +97,26 @@ describe('plans from the other apps', () => {
       expect(x.alts).toBe(x.lots * 3);
       expect(x.kept).toBeLessThanOrEqual(x.units + x.lots * (x.plan.repeat ?? 1) * 40);
     }
+  });
+});
+
+import { toLonLat } from '../src/lib/site';
+describe('map frame', () => {
+  it('the rectangle centre lands inside the real lot', () => {
+    const s = SITES[0];
+    const ring = planById('tml-2022').lots[0].ring!;
+    const [x, y] = toLonLat(s, s.L / 2, s.W / 2)!;
+    let c = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [xi, yi] = ring[i], [xj, yj] = ring[j];
+      if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c;
+    }
+    expect(c).toBe(true);
+  });
+  it('a 10 m step along the rectangle is 10 m on the map', () => {
+    const s = SITES[0];
+    const a = toLonLat(s, 0, 0)!, b = toLonLat(s, 10, 0)!;
+    const dx = (b[0] - a[0]) * 111320 * Math.cos((a[1] * Math.PI) / 180), dy = (b[1] - a[1]) * 110540;
+    expect(Math.hypot(dx, dy)).toBeCloseTo(10, 1);
   });
 });

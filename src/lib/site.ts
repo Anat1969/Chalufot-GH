@@ -37,6 +37,8 @@ export interface Site {
   netToGross?: number | null;
   /** תמהיל מטבלה 5: דירות עד 55 מ"ר, ועד 75 מ"ר (כקירוב ל-80). */
   planMix?: { small: number; medium: number } | null;
+  /** המרה למפה. במתחם: המגרש המייצג ממורכז במתחם ובכיוון שלו. */
+  frame?: Frame | null;
 }
 
 export interface PlanLot { lot: string; areaM2: number; residentialM2: number; units: number; floors: number | null; commerceM2: number; employmentM2: number; publicM2: number | null; residentialMainM2?: number; mix?: { small: number; medium: number }; ring: number[][] | null }
@@ -53,8 +55,11 @@ export const LEVEL_LABEL: Record<Plan['level'], string> = { lots: 'זכויות 
 export const DISTRICTS = (districtsJson as unknown as { districts: (DistrictInput & { name: string; source: string })[] }).districts;
 export const districtById = (id: number) => DISTRICTS.find((d) => d.id === id) ?? null;
 
+/** מסגרת ההמרה בין המלבן השקול (מטרים) לקואורדינטות במפה. */
+export interface Frame { lon0: number; lat0: number; kx: number; ky: number; ang: number; cx: number; cy: number; swap: boolean }
+
 /** Project a lon/lat ring to metres and fit an equivalent rectangle along its principal axis. */
-export function rectFromRing(ring: number[][], areaM2: number): { L: number; W: number; outline: [number, number][] } {
+export function rectFromRing(ring: number[][], areaM2: number): { L: number; W: number; outline: [number, number][]; frame: Frame } {
   const lat0 = ring.reduce((a, p) => a + p[1], 0) / ring.length;
   const lon0 = ring.reduce((a, p) => a + p[0], 0) / ring.length;
   const kx = 111320 * Math.cos((lat0 * Math.PI) / 180);
@@ -69,14 +74,27 @@ export function rectFromRing(ring: number[][], areaM2: number): { L: number; W: 
   let L = Math.max(...xs) - Math.min(...xs);
   let W = Math.max(...ys) - Math.min(...ys);
   const minX = Math.min(...xs), minY = Math.min(...ys);
+  const cx = minX + L / 2, cy = minY + W / 2;
   let outline = rot.map(([x, y]) => [x - minX, y - minY] as [number, number]);
-  if (W > L) { [L, W] = [W, L]; outline = outline.map(([x, y]) => [y, x]); }
+  const swap = W > L;
+  if (swap) { [L, W] = [W, L]; outline = outline.map(([x, y]) => [y, x]); }
   const k = Math.sqrt(areaM2 / (L * W));
-  return { L: +(L * k).toFixed(1), W: +(W * k).toFixed(1), outline: outline.map(([x, y]) => [x * k, y * k]) };
+  return { L: +(L * k).toFixed(1), W: +(W * k).toFixed(1), outline: outline.map(([x, y]) => [x * k, y * k]), frame: { lon0, lat0, kx, ky, ang, cx, cy, swap } };
+}
+
+/** נקודה במלבן השקול (u לאורך, v לרוחב, במטרים) למיקום במפה, ממורכזת במגרש האמיתי. */
+export function toLonLat(site: Pick<Site, 'L' | 'W' | 'frame'>, u: number, v: number): [number, number] | null {
+  const f = site.frame;
+  if (!f) return null;
+  const du = u - site.L / 2, dv = v - site.W / 2;
+  const xr = f.cx + (f.swap ? dv : du), yr = f.cy + (f.swap ? du : dv);
+  const c = Math.cos(-f.ang), s = Math.sin(-f.ang);
+  const x = xr * c + yr * s, y = -xr * s + yr * c;
+  return [x / f.kx + f.lon0, y / f.ky + f.lat0];
 }
 
 export function siteFromLot(plan: Plan, lot: PlanLot): Site {
-  const r = lot.ring ? rectFromRing(lot.ring, lot.areaM2) : { L: Math.sqrt(lot.areaM2 * 2), W: Math.sqrt(lot.areaM2 / 2), outline: null };
+  const r = lot.ring ? rectFromRing(lot.ring, lot.areaM2) : { L: Math.sqrt(lot.areaM2 * 2), W: Math.sqrt(lot.areaM2 / 2), outline: null, frame: null };
   const compound = plan.level === 'compound';
   const repeat = plan.repeat ?? 1;
   return {
@@ -87,6 +105,7 @@ export function siteFromLot(plan: Plan, lot: PlanLot): Site {
     L: +r.L.toFixed(1), W: +r.W.toFixed(1),
     // במתחם הגבול הוא של כל המתחם, לא של המגרש המייצג: משמש רק לכיוון.
     outline: compound ? null : r.outline,
+    frame: r.frame,
     districtId: plan.districtId,
     residentialM2: lot.residentialM2,
     units: lot.units,
