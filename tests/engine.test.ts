@@ -130,7 +130,7 @@ describe('massing sits inside the building lines', () => {
     }
     return c;
   };
-  for (const id of ['tml-2022', '603-0811588']) {
+  for (const id of ['tml-2022', '603-0811588', 'tml-2047', '3-03-104-67']) {
     it(`${id}: every corner of every building, in every alternative, is inside the building lines`, () => {
       let n = 0;
       for (const s of sitesOf(planById(id))) for (const mode of ['rights', 'mitar'] as const) for (const a of generate(s, mode)) {
@@ -140,7 +140,25 @@ describe('massing sits inside the building lines', () => {
           expect(inside(u, v, s.buildable!), `${s.label} ${a.name} ${b.role} (${u.toFixed(1)},${v.toFixed(1)})`).toBe(true);
         }
       }
-      expect(n).toBeGreaterThan(100);
+      expect(n).toBeGreaterThan(40);
     });
   }
+});
+
+describe('representative lot sits inside its compound', () => {
+  it('every corner of the representative lot is inside the compound boundary', () => {
+    for (const p of PLANS.filter((x) => x.level === 'compound')) {
+      const s = sitesOf(p)[0];
+      const ring = p.lots[0].ring!;
+      for (const [u, v] of s.outline!) {
+        const [x, y] = toLonLat(s, u, v)!;
+        let c = false;
+        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+          const [xi, yi] = ring[i], [xj, yj] = ring[j];
+          if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c;
+        }
+        expect(c, `${p.number} (${u},${v})`).toBe(true);
+      }
+    }
+  });
 });

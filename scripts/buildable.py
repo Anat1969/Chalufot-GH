@@ -61,8 +61,9 @@ def edge_setbacks(pts, lines_m):
     return out
 
 
-def _max_rect(grid):
-    """המלבן הגדול ביותר של תאים פנויים (שיטת ההיסטוגרמה). מחזיר (שטח, שורה עליונה, עמודה, גובה, רוחב)."""
+def _max_rect(grid, min_short=0):
+    """המלבן הטוב ביותר של תאים פנויים (שיטת ההיסטוגרמה). מחזיר (ציון, שורה עליונה, עמודה, גובה, רוחב).
+    עם min_short (בתאים): מלבן צר ממנו נענש, כדי שמגרש מייצג לא ייצא רצועה."""
     best = (0, 0, 0, 0, 0)
     if not grid: return best
     h = [0] * len(grid[0])
@@ -76,13 +77,15 @@ def _max_rect(grid):
             while stack and stack[-1][1] >= cur:
                 s, hh = stack.pop()
                 area = hh * (c - s)
-                if area > best[0]: best = (area, r - hh + 1, s, hh, c - s)
+                short = min(hh, c - s)
+                score = area if not min_short or short >= min_short else area * (short / min_short) ** 2
+                if score > best[0]: best = (score, r - hh + 1, s, hh, c - s)
                 start = s
             stack.append((start, cur))
     return best
 
 
-def buildable(ring, lines=None, default_setback=DEFAULT_SETBACK):
+def buildable(ring, lines=None, default_setback=DEFAULT_SETBACK, min_short_m=0):
     """ring: [lon,lat] של המגרש. lines: רשימת (שם, [lon,lat]...) של קווי בניין. מחזיר את מסגרת המלבן ושטח הבנייה."""
     lon0, lat0, kx, ky = _proj(ring)
     pts = [((p[0] - lon0) * kx, (p[1] - lat0) * ky) for p in ring]
@@ -124,19 +127,21 @@ def buildable(ring, lines=None, default_setback=DEFAULT_SETBACK):
         rot = [(x * c - y * s, x * s + y * c) for x, y in pts]
         x0, x1 = min(p[0] for p in rot), max(p[0] for p in rot)
         y0, y1 = min(p[1] for p in rot), max(p[1] for p in rot)
-        nx, ny = int((x1 - x0) / GRID) + 1, int((y1 - y0) / GRID) + 1
+        # רשת לפי גודל: חצי מטר במגרש, גסה יותר במתחם גדול (כ-160 תאים לאורך הצלע הארוכה).
+        gs = max(GRID, max(x1 - x0, y1 - y0) / 160)
+        nx, ny = int((x1 - x0) / gs) + 1, int((y1 - y0) / gs) + 1
         ci, si = math.cos(t), math.sin(t)
         grid = []
         for j in range(ny):
-            yy = y0 + (j + 0.5) * GRID
+            yy = y0 + (j + 0.5) * gs
             row = []
             for i in range(nx):
-                xx = x0 + (i + 0.5) * GRID
+                xx = x0 + (i + 0.5) * gs
                 row.append(ok(xx * ci - yy * si, xx * si + yy * ci))
             grid.append(row)
-        area, r, col, hh, ww = _max_rect(grid)
-        if best is None or area > best[0]:
-            best = (area, deg, x0 + col * GRID, y0 + r * GRID, ww * GRID, hh * GRID)
+        area, r, col, hh, ww = _max_rect(grid, min_short_m / gs)
+        if best is None or area * gs * gs > best[0]:
+            best = (area * gs * gs, deg, x0 + col * gs, y0 + r * gs, ww * gs, hh * gs)
     _, deg, rx, ry, w, h = best
     t = math.radians(deg)
     ccx, ccy = rx + w / 2, ry + h / 2

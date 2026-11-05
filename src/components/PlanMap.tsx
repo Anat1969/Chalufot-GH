@@ -61,8 +61,9 @@ export default function PlanMap({ planId, checked, selected, site, alt, onPick, 
   const checkedSet = useMemo(() => new Map(checked.map((c) => [c.id, c.verdict])), [checked]);
   const [whole, setWhole] = useState(false);
   const repLot = useMemo(() => {
-    if (!site?.frame || site.planId === 'custom' || site.outline) return null;
-    return [[0, 0], [site.L, 0], [site.L, site.W], [0, site.W]].map(([u, v]) => toLonLat(site, u, v)!) as Ring;
+    if (!site?.frame || site.planId === 'custom' || !site.representative) return null;
+    const ring = site.outline ?? [[0, 0], [site.L, 0], [site.L, site.W], [0, site.W]];
+    return ring.map(([u, v]) => toLonLat(site, u, v)!) as Ring;
   }, [site]);
   const focus = useMemo(() => (selected ? data?.land.find((l) => l.lot === selected)?.ring : null) ?? repLot, [data, selected, repLot]);
   const zoomed = !!focus && !whole;
