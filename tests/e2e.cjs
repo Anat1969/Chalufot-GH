@@ -43,9 +43,11 @@ async function page(b, opts = {}) {
     // בית
     await p.goto(BASE, { waitUntil: 'networkidle' });
     const h1 = await p.locator('h1').innerText();
-    ok(/בלוק היקפי.*7 מתוך 7/.test(h1), 'בית: התובנה המחושבת היא בלוק היקפי ב-7 מתוך 7 (' + h1 + ')');
-    ok(await p.locator('.home-kpis .kpi').count() === 4, 'בית: ארבע שאלות עם מספר גדול');
-    ok((await p.locator('.home-kpis .kpi').first().locator('.kpi-v').innerText()).includes('0'), 'בית: 0 חלופות עומדות כמו בתכנית');
+    ok(h1.includes('כשהיא כבר בדוקה'), 'בית: החזון בכותרת (' + h1 + ')');
+    ok(await p.locator('.chapter').count() === 5, 'בית: הסיפור בחמישה פרקים');
+    ok((await p.locator('.chapter').nth(2).innerText()).includes('7/7'), 'בית: בלוק היקפי עובר ב-7 מתוך 7 מגרשים');
+    ok(!/\b[RH]0\d|R11/.test(await p.locator('main').innerText()), 'בית: בלי קודים של כללים');
+        ok((await p.locator('.chapter').nth(1).innerText()).includes('0 מתוך 21'), 'בית: 0 מתוך 21 חלופות עומדות כמו בתכנית');
     ok(await p.locator('.hero-alt .stamp').count() === 3, 'בית: שלוש חלופות עם חותמת');
     ok(await p.locator('ai-menu').evaluate((el) => !!el.shadowRoot?.querySelector('.logo')), 'כפתור הלוגו A&I בסרגל');
     ok(!(await p.locator('header >> text=העתקת קישור').first().isVisible().catch(() => false)), 'אין כפתורי פיתוח חופשיים בסרגל');
@@ -67,7 +69,7 @@ async function page(b, opts = {}) {
     await p.locator('.actionbar').getByRole('button', { name: 'כמו בתכנית' }).click();
     await p.waitForFunction(() => location.hash.includes('mode=rights'));
     ok(await p.locator('.alt .stamp.v-fail').count() === 3, 'כמו בתכנית: שלוש החלופות לא עומדות');
-    const r11 = await p.locator('.matrix tbody tr', { hasText: 'R11' }).locator('td.st').allInnerTexts();
+    const r11 = await p.locator('.matrix tbody tr', { hasText: 'רח"ק מול טבלת המתחם' }).locator('td.st').allInnerTexts();
     ok(r11.every((t) => t === 'לא עומד'), 'כמו בתכנית: הרח"ק חוסם את כולן');
     await p.locator('.actionbar').getByRole('button', { name: 'מותאם למתאר' }).click();
     await p.waitForFunction(() => location.hash.includes('mode=mitar'));
@@ -77,10 +79,10 @@ async function page(b, opts = {}) {
     ok((await p.locator('.detail-title').innerText()).includes('לוחות ונקודה'), 'כפתור חלופה ג בסרגל הקבוע');
     await p.locator('.alt').nth(1).click();
     ok((await p.locator('.detail-title').innerText()).includes('בלוק היקפי'), 'לחיצה על כרטיס בוחרת חלופה');
-    await p.locator('.matrix tbody tr', { hasText: 'H02' }).click();
+    await p.locator('.matrix tbody tr', { hasText: 'דירות בבניין שאינו רב קומות' }).click();
     ok(p.url().includes('rule=H02') && await p.locator('.matrix tr.is-row').count() === 1 && await p.locator('.matrix tr.is-dim').count() === 11, 'לחיצה על כלל מדגישה אותו ומעמעמת את השאר');
     ok(await p.locator('.alt-rule').count() === 3, 'הכלל הנבחר מוצג בכל כרטיס');
-    await p.locator('.matrix tbody tr', { hasText: 'H02' }).click();
+    await p.locator('.matrix tbody tr', { hasText: 'דירות בבניין שאינו רב קומות' }).click();
     ok(await p.locator('.matrix tr.is-dim').count() === 0, 'לחיצה שנייה מבטלת את ההדגשה');
     ok(await p.locator('.drawing svg').count() === 2, 'חתך ותכנית לחלופה שנבחרה');
     await p.reload({ waitUntil: 'networkidle' });
@@ -106,7 +108,7 @@ async function page(b, opts = {}) {
     ok((await p.locator('.detail .crumbs').innerText()).includes('מגרש 601'), 'המגרש הראשון בתכנית נבחר');
     ok((await p.locator('.col-sub .lvl').innerText()).includes('טבלה 5'), 'רמת הנתונים מסומנת');
     await p.locator('.actionbar').getByRole('button', { name: 'כמו בתכנית' }).click();
-    ok((await p.locator('.matrix tbody tr', { hasText: 'R04' }).locator('td.st').first().innerText()) === 'חסר', 'שטח ציבורי לא ידוע: חסר, לא כישלון');
+    ok((await p.locator('.matrix tbody tr', { hasText: 'תועלות ציבוריות' }).locator('td.st').first().innerText()) === 'חסר', 'שטח ציבורי לא ידוע: חסר, לא כישלון');
     await p.locator('.actionbar').getByRole('button', { name: 'מותאם למתאר' }).click();
     ok(await p.locator('.alt .stamp.v-pass').count() >= 1, 'בקריית שמעון פרס יש חלופה שעומדת בלי תנאי');
     await p.getByLabel('תכנית', { exact: true }).selectOption('tml-2021');
@@ -173,8 +175,8 @@ async function page(b, opts = {}) {
     ok(await p.locator('.catalog tbody tr').count() === 12, 'שיטה: 12 כללים עם מקור');
     ok(await p.locator('.assume div').count() >= 9, 'שיטה: הנחות המחולל גלויות');
     await p.locator('.brand').click();
-    await p.waitForFunction(() => /7 מתוך 7/.test(document.querySelector('h1')?.textContent ?? ''), null, { timeout: 4000 }).catch(() => {});
-    ok(/7 מתוך 7/.test(await p.locator('h1').innerText()), 'שם האפליקציה מוביל לבית (' + p.url() + ')');
+    await p.waitForFunction(() => (document.querySelector('h1')?.textContent ?? '').includes('כבר בדוקה'), null, { timeout: 4000 }).catch(() => {});
+    ok((await p.locator('h1').innerText()).includes('כבר בדוקה'), 'שם האפליקציה מוביל לבית (' + p.url() + ')');
 
     ok(await p.evaluate(() => [...document.querySelectorAll('button')].every((x) => getComputedStyle(x).borderRadius === '0px')), 'כל הכפתורים מרובעים');
     ok(await p.evaluate(() => document.documentElement.dir === 'rtl'), 'הדף ב-RTL');

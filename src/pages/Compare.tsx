@@ -127,7 +127,7 @@ export default function Compare() {
           <ul className="bars" aria-label="מספר החלופות שכל כלל חוסם">
             {failList.map(([id, f]) => (
               <li key={id}>
-                <span className="bar-l"><bdi className="rid">{id}</bdi> {f.t}</span>
+                <span className="bar-l">{f.t}</span>
                 <span className="bar-track"><span className="bar bar-fail" style={{ width: `${(f.n / cells.length) * 100}%` }} /></span>
                 <span className="bar-v"><bdi className="num">{f.n}</bdi></span>
               </li>

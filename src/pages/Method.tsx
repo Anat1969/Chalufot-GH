@@ -33,8 +33,8 @@ export default function Method() {
       <h2 className="section-title">12 הבדיקות</h2>
       <div className="table-wrap">
         <table className="catalog">
-          <thead><tr><th>קוד</th><th>כלל</th><th>נוסחה</th><th>מקור</th><th>ודאות</th></tr></thead>
-          <tbody>{RULE_CATALOG.map((r) => <tr key={r.id}><td><bdi className="rid">{r.id}</bdi></td><td><strong>{r.title}</strong></td><td>{r.formula}</td><td className="src">{r.source}</td><td>{r.certainty}</td></tr>)}</tbody>
+          <thead><tr><th>כלל</th><th>נוסחה</th><th>מקור</th><th>ודאות</th></tr></thead>
+          <tbody>{RULE_CATALOG.map((r) => <tr key={r.id}><td><strong>{r.title}</strong></td><td>{r.formula}</td><td className="src">{r.source}</td><td>{r.certainty}</td></tr>)}</tbody>
         </table>
       </div>
 

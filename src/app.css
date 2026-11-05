@@ -366,3 +366,25 @@ ai-menu { display: block; min-width: 40px; min-height: 36px; }
 @media print { .pm-tiles { display: none; } }
 .pm-zoom { position: absolute; top: 4px; inset-inline-end: 4px; z-index: 2; background: rgba(255, 255, 255, .9); box-shadow: var(--shadow-1); }
 .pm-zoom .chip-t { font-size: 12px; padding: 3px 8px; }
+
+/* דף הבית: הסיפור */
+.story { margin: 28px 0 8px; }
+.story-h { font-size: clamp(20px, 2vw, 26px); font-weight: 500; margin: 0 0 12px; }
+.chapters { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; border-top: 1px solid var(--ink); }
+.chapter { display: grid; grid-template-columns: minmax(120px, 190px) minmax(0, 1fr); gap: 24px; padding: 18px 0; border-bottom: 1px solid var(--rule); align-items: start; }
+.ch-fig { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 10px; align-items: baseline; }
+.ch-n { grid-row: 1 / 3; font-family: var(--mono); font-size: 13px; color: var(--ink-mute); border: 1px solid var(--rule); width: 26px; height: 26px; display: grid; place-items: center; }
+.ch-big { font-family: var(--mono); font-size: clamp(30px, 3.4vw, 46px); font-weight: 600; line-height: 1; color: var(--ink); white-space: nowrap; }
+.ch-unit { font-size: 12.5px; color: var(--ink-mute); }
+.chapter:nth-child(2) .ch-big, .chapter:nth-child(4) .ch-big { color: var(--breach); }
+.chapter:nth-child(3) .ch-big { color: var(--permit); }
+.ch-text h3 { margin: 0 0 6px; font-size: clamp(17px, 1.6vw, 21px); font-weight: 600; line-height: 1.35; }
+.ch-text p { margin: 0 0 2px; font-size: 15px; color: var(--ink-soft); line-height: 1.7; }
+.also-list { margin: 0; padding-inline-start: 18px; display: grid; gap: 4px; font-size: 14.5px; color: var(--ink-soft); }
+.map-of-content .src-card { text-align: start; font: inherit; }
+.haiku { margin: 24px auto 8px; text-align: center; max-width: 420px; }
+.haiku-text { font-size: 19px; line-height: 1.8; margin: 0; font-weight: 400; }
+.haiku-note { font-size: 12.5px; color: var(--ink-mute); margin: 6px 0 0; }
+@media (max-width: 760px) {
+  .chapter { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+}
