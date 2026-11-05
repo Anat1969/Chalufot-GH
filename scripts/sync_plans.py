@@ -25,6 +25,7 @@ NIVNE = 'https://ashdod-ma-nivne.vercel.app'
 MITAR_PLANS = {'תמל/2022': 'tml-2022'}
 STATUS = {'approved': 'מאושרת', 'planning': 'בתכנון', 'permit': 'היתר', 'construction': 'בביצוע', 'deposited': 'הופקדה'}
 NET_SHARE, TYPICAL_LOT = 0.6, 4000
+SKIPPED = []
 
 
 def get(url, fixture):
@@ -162,8 +163,11 @@ def model_plan(row, districts):
 
 
 def compound_plan(row, districts, gross_per_unit):
-    rings = [rnd(r, 6) for f in row['geojson']['features'] for r in outer_rings(f)]
-    if not rings: return None, None
+    rings = [rnd(r, 6) for f in (row.get('geojson') or {}).get('features', []) for r in outer_rings(f)]
+    # תכנית בלי יח"ד מתוכננות (תעסוקה, נמל, תשתית): מחולל המגורים לא חל עליה. מדלגים, ולא נופלים.
+    if not rings or not row.get('units_planned'):
+        SKIPPED.append(f"{row['plan_number']} {row['title']}: {'אין יח\"ד מתוכננות' if rings else 'אין גבול'}")
+        return None, None
     a = sum(area_m2(r) for r in rings)
     k = max(1, round(a * NET_SHARE / TYPICAL_LOT))
     u = round(row['units_planned'] / k)
@@ -218,6 +222,7 @@ def main():
         m['bounds'] = bounds(rings) if rings else None
         with open(os.path.join(ROOT, 'public', 'maps', pid + '.json'), 'w', encoding='utf-8') as f: json.dump(m, f, ensure_ascii=False, separators=(',', ':'))
     print(f"{len(plans)} plans, {sum(len(p['lots']) for p in plans)} lots, {'unchanged' if same else 'changed'}")
+    for x in SKIPPED: print('skipped:', x)
 
 
 if __name__ == '__main__':
