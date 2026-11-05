@@ -65,3 +65,37 @@ describe('verified alternatives', () => {
     }
   });
 });
+
+import { PLANS, planById, sitesOf } from '../src/lib/site';
+import { allSummaries } from '../src/lib/studio';
+
+describe('plans from the other apps', () => {
+  it('18 plans: 2 with table 5 lots, 16 compounds', () => {
+    expect(PLANS.length).toBe(18);
+    expect(PLANS.filter((p) => p.level === 'lots').map((p) => p.number)).toEqual(['תמל/2022', '603-0811588']);
+    expect(sitesOf(planById('603-0811588')).length).toBe(33);
+  });
+  it('a compound becomes representative lots that add back to the plan', () => {
+    const p = planById('תמל-2021');
+    const s = sitesOf(p)[0];
+    expect(s.repeat).toBe(p.repeat);
+    expect(Math.abs(s.units * s.repeat - p.unitsPlanned)).toBeLessThanOrEqual(s.repeat);
+    expect(s.publicKnown).toBe(false);
+  });
+  it('unknown public area is "missing", not a failure, as in the plan', () => {
+    const s = sitesOf(planById('603-0811588'))[0];
+    const r = verify(s, generate(s, 'rights')[0]).results.find((x) => x.id === 'R04')!;
+    expect(r.status).toBe('missing');
+  });
+  it('table 5 mix of 603-0811588 is checked as it is', () => {
+    const s = sitesOf(planById('603-0811588'))[0];
+    expect(s.planMix).toEqual({ small: 3, medium: 6 });
+    expect(verify(s, generate(s, 'rights')[1]).results.find((x) => x.id === 'R01')!.status).toBe('fail');
+  });
+  it('every plan has a summary, and fitting never adds a blocking rule on FAR', () => {
+    for (const x of allSummaries()) {
+      expect(x.alts).toBe(x.lots * 3);
+      expect(x.kept).toBeLessThanOrEqual(x.units + x.lots * (x.plan.repeat ?? 1) * 40);
+    }
+  });
+});

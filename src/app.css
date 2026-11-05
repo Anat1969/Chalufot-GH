@@ -316,3 +316,18 @@ ai-menu { display: block; min-width: 40px; min-height: 36px; }
   .alt, .kpi, .drawing { box-shadow: none; break-inside: avoid; }
   .mass, .stamp { animation: none !important; }
 }
+
+/* בחירת תכנית ורמת הנתונים */
+.plan-select { font-size: 13px; }
+.lvl { display: inline-block; font-size: 11.5px; font-weight: 600; padding: 0 6px; border-inline-start: 3px solid; }
+.lvl-lots { color: var(--permit); border-color: var(--permit); }
+.lvl-compound { color: var(--amber); border-color: var(--amber); }
+.plans-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.plans-table th, .plans-table td { text-align: start; padding: 0 8px; height: 36px; border-bottom: 1px solid var(--rule-soft); white-space: nowrap; }
+.plans-table thead th { font-size: 12px; color: var(--ink-soft); position: sticky; top: 0; background: var(--sheet); }
+.plans-table tbody th { font-weight: 400; max-width: 280px; overflow: hidden; text-overflow: ellipsis; }
+.plans-table tbody tr { cursor: pointer; transition: background .15s; }
+.plans-table tbody tr:hover { background: var(--rule-soft); }
+.plans-table tr.is-row { background: #FFF9D6; }
+.plans-table tbody tr:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+.col-site .lots { max-height: none; }

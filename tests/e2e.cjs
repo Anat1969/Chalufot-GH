@@ -85,6 +85,22 @@ async function page(b, opts = {}) {
     await p.reload({ waitUntil: 'networkidle' });
     ok((await p.locator('.detail-title').innerText()).includes('בלוק היקפי') && (await p.locator('.detail .crumbs').innerText()).includes('102'), 'המצב נשמר בכתובת אחרי רענון');
 
+    // בחירת תכנית בסטודיו
+    await p.getByLabel('תכנית', { exact: true }).selectOption('603-0811588');
+    await p.waitForFunction(() => location.hash.includes('plan=603-0811588'));
+    ok(await p.locator('.lots .lot').count() === 34, 'תכנית 603-0811588: 33 מגרשים ועוד מגרש משלי');
+    ok((await p.locator('.detail .crumbs').innerText()).includes('מגרש 601'), 'המגרש הראשון בתכנית נבחר');
+    ok((await p.locator('.col-sub .lvl').innerText()).includes('טבלה 5'), 'רמת הנתונים מסומנת');
+    await p.locator('.actionbar').getByRole('button', { name: 'כמו בתכנית' }).click();
+    ok((await p.locator('.matrix tbody tr', { hasText: 'R04' }).locator('td.st').first().innerText()) === 'חסר', 'שטח ציבורי לא ידוע: חסר, לא כישלון');
+    await p.locator('.actionbar').getByRole('button', { name: 'מותאם למתאר' }).click();
+    ok(await p.locator('.alt .stamp.v-pass').count() >= 1, 'בקריית שמעון פרס יש חלופה שעומדת בלי תנאי');
+    await p.getByLabel('תכנית', { exact: true }).selectOption('תמל-2021');
+    await p.waitForFunction(() => location.hash.includes('plan=%D7%AA%D7%9E%D7%9C-2021') || location.hash.includes('plan=תמל-2021'));
+    ok((await p.locator('.lots .lot').first().innerText()).includes('מגרש מייצג'), 'מתחם: מגרש מייצג');
+    ok((await p.locator('.studio .kpi-i').nth(2).innerText()).includes('בכל המתחם'), 'מתחם: מחיר העמידה מוכפל לכל המתחם');
+    await p.goto(BASE + '#/studio?plan=tml-2022&lot=102&mode=mitar&alt=B', { waitUntil: 'networkidle' });
+
     // ניסוח לוועדה
     await p.locator('.ai-head button').click();
     await p.locator('.brief').waitFor({ timeout: 5000 });
@@ -117,16 +133,24 @@ async function page(b, opts = {}) {
     await p.locator('.tabs').getByRole('button', { name: 'השוואה' }).click();
     await p.waitForFunction(() => location.hash.startsWith('#/compare'));
     ok(await p.locator('.gl-cell').count() === 21, 'השוואה: 21 חלופות');
-    ok(await p.locator('.chart-card .chart-insight').count() === 3, 'השוואה: תובנה מחושבת מתחת לכל גרף');
+    ok(await p.locator('.chart-card .chart-insight').count() === 4, 'השוואה: תובנה מחושבת מתחת לכל גרף');
+    ok(await p.locator('.plans-table tbody tr').count() === 18, 'השוואה: טבלה של 18 תכניות');
+    ok(/מתוך 18 תכניות/.test(await p.locator('h1').innerText()), 'השוואה: כותרת על כל התכניות');
     await p.getByRole('button', { name: 'כמו בתכנית' }).click();
-    ok((await p.locator('h1').innerText()).startsWith('0 מתוך 21'), 'השוואה כמו בתכנית: 0 מתוך 21');
+    ok((await p.locator('.chart-card').nth(1).locator('.chart-insight').innerText()).includes('אף חלופה לא עוברת'), 'השוואה כמו בתכנית: תמל/2022 לא עוברת באף חלופה');
+    await p.locator('.plans-table tbody tr', { hasText: '603-0811588' }).click();
+    await p.waitForFunction(() => location.hash.includes('plan=603-0811588'));
+    ok(await p.locator('.gl-cell').count() === 99, 'בחירת תכנית בטבלה: 33 מגרשים, 99 חלופות');
+    await p.locator('.plans-table tbody tr', { hasText: 'תמל/2022' }).click();
+    await p.waitForFunction(() => location.hash.includes('plan=tml-2022'));
     await p.locator('.gl-cell').nth(4).click();
     await p.waitForFunction(() => location.hash.startsWith('#/studio'));
-    ok(p.url().includes('lot=102') && p.url().includes('alt=B'), 'תא בהשוואה פותח את החלופה בסטודיו');
+    ok(p.url().includes('lot=102') && p.url().includes('alt=B') && p.url().includes('plan=tml-2022'), 'תא בהשוואה פותח את החלופה בסטודיו');
 
     // שיטה
     await p.locator('.tabs').getByRole('button', { name: 'שיטה' }).click();
     await p.waitForFunction(() => location.hash.startsWith('#/method'));
+    await p.locator('.catalog tbody tr').first().waitFor({ timeout: 4000 }).catch(() => {});
     ok(await p.locator('.catalog tbody tr').count() === 12, 'שיטה: 12 כללים עם מקור');
     ok(await p.locator('.assume div').count() >= 9, 'שיטה: הנחות המחולל גלויות');
     await p.locator('.brand').click();
@@ -142,7 +166,7 @@ async function page(b, opts = {}) {
 
     for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 720 }, { width: 1920, height: 1080 }]) {
       const m = await page(b, { viewport: vp, reducedMotion: 'reduce' });
-      for (const h of ['', '#/studio', '#/studio?mode=rights&lot=102', '#/compare', '#/method']) {
+      for (const h of ['', '#/studio', '#/studio?mode=rights&lot=102', '#/studio?plan=603-0811588', '#/compare', '#/compare?plan=603-0811588', '#/method']) {
         await m.goto(BASE + h, { waitUntil: 'networkidle' });
         ok(!(await m.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)), `${vp.width}px ${h || 'בית'}: בלי גלילה אופקית`);
       }

@@ -77,6 +77,11 @@ export function verify(site: Site, a: Alternative): Verified {
   const { input, rowNote } = toPlanInput(site, a);
   const base = checkPlan(input, districtById(site.districtId));
   if (rowNote) { const r = base.find((x) => x.id === 'R11'); if (r) r.message += `. ${rowNote}`; }
+  // בלי שטח ציבורי במקור, אין מה לבדוק: חסר, לא כישלון. במצב מותאם המחולל עצמו קובע 5.5%.
+  if (!site.publicKnown && a.mode === 'rights' && site.isRenewal) {
+    const i = base.findIndex((x) => x.id === 'R04');
+    if (i >= 0) base[i] = { ...base[i], status: 'missing', values: {}, message: 'חסר: המקור לא מפרט שטח ציבורי בנוי למגרש', certainty: 'missing' };
+  }
   const results = [...base, ...buildRules(site, a)].sort((x, y) => ORDER.indexOf(x.id) - ORDER.indexOf(y.id));
   const counts = { pass: 0, fail: 0, warn: 0, info: 0, missing: 0 } as Record<Status, number>;
   results.forEach((r) => counts[r.status]++);

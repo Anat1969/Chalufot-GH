@@ -6,8 +6,8 @@ import HowTo from '../components/HowTo';
 import { requestBrief, type Brief } from '../lib/ai';
 import type { AltKey } from '../lib/massing';
 import { CERTAINTY_LABEL, STATUS_LABEL } from '../lib/rules';
-import { DISTRICTS, SITES, PLAN } from '../lib/site';
-import { ALT_LETTER, bestOf, useStudio } from '../lib/studio';
+import { DISTRICTS, LEVEL_LABEL, PLANS, sitesOf } from '../lib/site';
+import { ALT_LETTER, bestOf, useStudio, keepBest } from '../lib/studio';
 import { VERDICT_LABEL, type Verified } from '../lib/verify';
 
 const KEYS: AltKey[] = ['A', 'B', 'C'];
@@ -20,7 +20,7 @@ export default function Studio() {
   const passing = verified.filter((v) => v.verdict !== 'fail');
   const fitted = mode === 'mitar' ? verified : other;
   const asPlan = mode === 'mitar' ? other : verified;
-  const bestFit = bestOf(fitted);
+  const bestFit = keepBest(fitted);
   const lost = site.units - bestFit.alt.units;
   const blockCount = new Map<string, number>();
   verified.forEach((v) => v.blocking.forEach((r) => blockCount.set(r.id, (blockCount.get(r.id) ?? 0) + 1)));
@@ -38,15 +38,26 @@ export default function Studio() {
         <div className="col-head">
           <h2 className="col-title">איזה מגרש בודקים?</h2>
           <HowTo>
-            <p>בוחרים מגרש מתכנית <strong>{PLAN.name}</strong>, או מזינים מגרש משלך.</p>
+            <p>בוחרים <strong>תכנית</strong> מתוך {PLANS.length} התכניות שבאפליקציות, ואז מגרש. אפשר גם להזין מגרש משלך.</p>
+            <p>בתכנית עם טבלה 5 כל מגרש נבדק בזכויות שלו. במתחם שיש לו רק גבול ויח"ד נבדק <strong>מגרש מייצג</strong>, וההנחות כתובות מתחתיו.</p>
             <p>המחולל מייצר <strong>3</strong> חלופות נפח, וכל אחת עוברת <strong>12</strong> בדיקות של תואם מתאר.</p>
             <p>"מותאם למתאר" מקצץ ומארגן מחדש את הזכויות עד שהחלופה עומדת. "כמו בתכנית" מראה את הזכויות כפי שאושרו.</p>
             <p>לחיצה על כלל בטבלה מדגישה אותו בכל החלופות.</p>
           </HowTo>
         </div>
-        <p className="col-sub"><strong>{PLAN.name}</strong> {PLAN.title}. <span className="src">{PLAN.status}</span></p>
+        <label className="fld">
+          <span className="label">תכנית</span>
+          <select className="field plan-select" aria-label="תכנית" value={s.plan.id} onChange={(e) => s.setPlan(e.target.value)}>
+            {(['lots', 'compound'] as const).map((lv) => (
+              <optgroup key={lv} label={LEVEL_LABEL[lv]}>
+                {PLANS.filter((p) => p.level === lv).map((p) => <option key={p.id} value={p.id}>{p.number} · {p.name}</option>)}
+              </optgroup>
+            ))}
+          </select>
+        </label>
+        <p className="col-sub"><strong>{s.plan.name}</strong>. <span className={`lvl lvl-${s.plan.level}`}>{LEVEL_LABEL[s.plan.level]}</span> <span className="src">{s.plan.status} · <bdi className="num">{fmt(s.plan.unitsPlanned)}</bdi> יח"ד · מקור: <a href={s.plan.sourceUrl} target="_blank" rel="noreferrer">{s.plan.sourceApp}</a></span></p>
         <ul className="lots">
-          {SITES.map((l) => (
+          {sitesOf(s.plan).map((l) => (
             <li key={l.id}>
               <button className={`lot press ${s.lot === l.id ? 'is-on' : ''}`} aria-pressed={s.lot === l.id} onClick={() => s.setLot(l.id)}>
                 <LotGlyph outline={l.outline} L={l.L} W={l.W} />
@@ -66,7 +77,7 @@ export default function Studio() {
         {s.lot === 'custom' && <CustomForm s={s} />}
         <label className="fld">
           <span className="label">מרחק מציר מתע"ן, מטרים</span>
-          <input className="field" type="number" inputMode="numeric" min={0} placeholder="חסר: לא ידוע" value={site.distanceToMassTransit ?? ''} onChange={(e) => s.update({ transit: { ...s.saved.transit, [site.id]: e.target.value === '' ? null : +e.target.value } })} />
+          <input className="field" type="number" inputMode="numeric" min={0} placeholder="חסר: לא ידוע" value={site.distanceToMassTransit ?? ''} onChange={(e) => s.update({ transit: { ...s.saved.transit, [`${site.planId}:${site.id}`]: e.target.value === '' ? null : +e.target.value } })} />
         </label>
         <dl className="facts">
           <div><dt className="label">מתחם</dt><dd>{DISTRICTS.find((d) => d.id === site.districtId)?.name}</dd></div>
@@ -92,7 +103,7 @@ export default function Studio() {
           <div className="kpi">
             <span className="kpi-q">מה עולה העמידה במתאר?</span>
             <span className={`kpi-v ${lost > 0 ? 'is-cost' : ''}`}><bdi className="num">{lost > 0 ? `−${fmt(lost)}` : fmt(Math.abs(lost))}</bdi><small> יח"ד</small></span>
-            <Rich as="p" className="kpi-i">{`==${pct(Math.max(lost, 0) / site.units)} מהדירות==: מ-**${fmt(site.units)}** בתכנית ל-**${fmt(bestFit.alt.units)}** ב${bestFit.alt.name}`}</Rich>
+            <Rich as="p" className="kpi-i">{`==${pct(Math.max(lost, 0) / site.units)} מהדירות==: מ-**${fmt(site.units)}** בתכנית ל-**${fmt(bestFit.alt.units)}** ב${bestFit.alt.name}${site.repeat > 1 ? `. בכל המתחם, **${site.repeat}** מגרשים: **${fmt(lost * site.repeat)}** יח"ד` : ''}`}</Rich>
           </div>
         </div>
 
