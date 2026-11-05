@@ -84,7 +84,8 @@ export default function Studio() {
           <div><dt className="label">מתחם</dt><dd>{DISTRICTS.find((d) => d.id === site.districtId)?.name}</dd></div>
           <div><dt className="label">רח"ק בזכויות</dt><dd><bdi className="num">{((site.residentialM2 + site.commerceM2 + site.employmentM2 + site.publicM2) / site.areaM2).toFixed(1)}</bdi></dd></div>
           <div><dt className="label">קומות בטבלה 5</dt><dd><bdi className="num">{site.maxFloors ?? 'חסר'}</bdi></dd></div>
-          <div><dt className="label">מגרש מוכלל</dt><dd><bdi className="num">{Math.round(site.L)}×{Math.round(site.W)}</bdi> מ'</dd></div>
+          <div><dt className="label">{site.buildable ? 'מלבן בנייה' : 'מגרש מוכלל'}</dt><dd><bdi className="num">{Math.round(site.L)}×{Math.round(site.W)}</bdi> מ'</dd></div>
+          {site.setbacks && <div className="facts-wide"><dt className="label">קווי בניין לפי צלע</dt><dd><bdi className="num">{[...new Set(site.setbacks.map((x) => x.m))].sort((a, b) => a - b).join(' · ')}</bdi> מ'</dd></div>}
         </dl>
         <p className="src">{site.source}</p>
       </aside>
@@ -165,9 +166,12 @@ export default function Studio() {
 }
 
 function LotGlyph({ outline, L, W }: { outline: [number, number][] | null; L: number; W: number }) {
+  const pts = outline ?? [[0, 0], [L, 0], [L, W], [0, W]];
+  const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+  const x0 = Math.min(...xs), y0 = Math.min(...ys), w = Math.max(...xs) - x0, h = Math.max(...ys) - y0;
   return (
-    <svg className="lot-glyph" viewBox={`-2 -2 ${L + 4} ${W + 4}`} aria-hidden style={{ direction: 'ltr' }}>
-      {outline ? <polygon points={outline.map((p) => p.join(',')).join(' ')} /> : <rect width={L} height={W} />}
+    <svg className="lot-glyph" viewBox={`${x0 - 2} ${y0 - 2} ${w + 4} ${h + 4}`} aria-hidden style={{ direction: 'ltr' }}>
+      <polygon points={pts.map((p) => p.join(',')).join(' ')} />
     </svg>
   );
 }
@@ -214,7 +218,7 @@ function Detail({ v, all, s }: { v: Verified; all: Verified[]; s: ReturnType<typ
       <h1 className="detail-title"><bdi>{ALT_LETTER[v.alt.key]}.</bdi> {v.alt.name}: {VERDICT_LABEL[v.verdict]}</h1>
       <Rich as="p" className="detail-sub">{`${v.alt.thesis} **${fmt(v.alt.units)}** יח"ד, **${v.alt.maxFloors}** קומות, **${Math.round(v.alt.heightM)}** מ'.`}</Rich>
       {s.lot !== 'custom' && (
-        <PlanMap planId={s.plan.id} checked={sitesOf(s.plan).map((x) => ({ id: x.id }))} selected={s.site.id} site={s.site} alt={v.alt} onPick={(l) => s.setLot(l)} height={250}
+        <PlanMap planId={s.plan.id} checked={sitesOf(s.plan).map((x) => ({ id: x.id }))} selected={s.site.id} site={s.site} alt={v.alt} onPick={(l) => s.setLot(l)} height={290}
           label={`תשריט ${s.plan.number}: ${s.site.label} ונפחי ${v.alt.name}`} />
       )}
       <div className="drawings">

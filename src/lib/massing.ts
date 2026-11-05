@@ -53,7 +53,7 @@ export const ASSUMPTIONS = {
 
 export const ASSUMPTION_TEXT: [string, string][] = [
   ['גובה קומה', `${ASSUMPTIONS.floorM} מ', קומת קרקע ${ASSUMPTIONS.groundFloorM} מ'`],
-  ['קווי בניין', `${ASSUMPTIONS.setbackM} מ' מכל גבול, במגרש מוכלל למלבן שקול`],
+  ['קווי בניין', `מקווי הבניין שבתשריט לכל צלע, והחלופה בתוך המלבן הגדול ביותר ביניהם. בלי תשריט: ${ASSUMPTIONS.setbackM} מ' מכל גבול`],
   ['עומק אגף', `${ASSUMPTIONS.barDepthM} מ' בבלוק ובלוחות`],
   ['עיקרי מתוך ברוטו', `${ASSUMPTIONS.netToGross * 100}% לחישוב תמהיל, כשטבלה 5 לא מפרטת עיקרי ושירות`],
   ['דירה קטנה ובינונית', `${ASSUMPTIONS.smallUnitNet} ו-${ASSUMPTIONS.mediumUnitNet} מ"ר נטו`],
@@ -189,22 +189,27 @@ function lowWing(x0: number, y0: number, maxLen: number, depth: number, z: numbe
 /** א: מגדל על מסד. קרקע פנויה ככל האפשר, הצפיפות לגובה. */
 export function towerOnPodium(site: Site, mode: Mode, cap?: number | null): Alternative {
   const p = program(site, mode, cap);
-  const sb = ASSUMPTIONS.setbackM;
+  const sb = site.setback ?? ASSUMPTIONS.setbackM;
   const nonRes = p.commerceM2 + p.employmentM2 + p.publicM2;
   const g = p.residentialM2 / p.units;
   const upf = PARAMS.highRise.maxUnitsPerFloor;
-  const side = Math.sqrt(upf * g);
-  const pw = Math.max(site.L - 2 * sb, side);
-  const pd = Math.max(Math.min(site.W - 2 * sb, (0.55 * site.areaM2) / pw), side);
+  const iw = Math.max(site.L - 2 * sb, 6), id = Math.max(site.W - 2 * sb, 6);
+  // קומת המגדל: ריבוע כשיש עומק, ואחרת מלבן באותו שטח. לעולם לא מעבר לקו הבניין.
+  const plate = upf * g;
+  const td = Math.min(Math.sqrt(plate), id);
+  const tw = Math.min(plate / td, iw);
+  const pw = iw;
+  const pd = Math.min(id, Math.max((0.55 * site.areaM2) / pw, td));
   const podiumFloors = Math.min(Math.max(Math.ceil(nonRes / (pw * pd)), 1), 3);
   const boxes: Box[] = [{ x: sb, y: sb, w: pw, d: pd, z: 0, floors: podiumFloors, role: 'podium' }];
   const res: Res[] = [];
   const notes: string[] = [];
+  if (tw * td < plate - 1) notes.push('המגרש צר: קומת המגדל קטנה מ-6 דירות, והמגדל עולה');
   let towerZone = pw;
   let left = p.units;
   if (mode === 'mitar') {
     const dw = Math.min(ASSUMPTIONS.barDepthM, pd / 2);
-    const w1 = lowWing(sb + pw, sb, pw - side - 8, dw, podiumFloors, p.units, g);
+    const w1 = lowWing(sb + pw, sb, pw - tw - 8, dw, podiumFloors, p.units, g);
     if (w1) {
       boxes.push(w1.box); res.push(w1); left -= w1.units;
       const need = Math.ceil(p.units * PARAMS.highRise.minNonHighRiseShare) - w1.units;
@@ -217,18 +222,21 @@ export function towerOnPodium(site: Site, mode: Mode, cap?: number | null): Alte
       notes.push(`אגפי רחוב נמוכים על המסד: **${low}** יח"ד עד 29 מ'`);
     }
   }
+  const upfFit = Math.max(1, Math.floor((tw * td) / g));
   const capF = site.maxFloors ?? 40;
+  // כמה מגדלים נכנסים לאורך, עם מרווח של 12 מ' לפחות ביניהם
+  const fitN = Math.max(1, Math.floor((towerZone + 12) / (tw + 12)));
   let n = 1;
-  let tf = Math.ceil(left / (n * upf));
-  while (podiumFloors + tf > capF && n < 4) { n++; tf = Math.ceil(left / (n * upf)); }
-  if (n * side + (n - 1) * 12 > towerZone) notes.push(`**${n}** מגדלים צפופים: המרווח ביניהם קטן מ-12 מ'`);
-  const gap = n > 1 ? Math.max((towerZone - n * side) / (n - 1), 0) : 0;
+  let tf = Math.ceil(left / (n * upfFit));
+  while (podiumFloors + tf > capF && n < Math.min(4, fitN)) { n++; tf = Math.ceil(left / (n * upfFit)); }
+  if (podiumFloors + tf > capF && n === fitN) notes.push(`אין מקום למגדל נוסף בין קווי הבניין: **${n}** מגדלים, והקומות עולות`);
+  const gap = n > 1 ? Math.max((towerZone - n * tw) / (n - 1), 0) : 0;
   for (let i = 0; i < n; i++) {
     const u = Math.ceil(left / (n - i));
     left -= u;
-    const f = Math.ceil(u / upf);
-    const x = n === 1 ? sb + Math.max((towerZone - side) / 2, 0) : sb + i * (side + gap);
-    const t: Box = { x, y: sb + (pd - side) / 2, w: side, d: side, z: podiumFloors, floors: f, role: 'tower' };
+    const f = Math.ceil(u / upfFit);
+    const x = n === 1 ? sb + Math.max((towerZone - tw) / 2, 0) : sb + i * (tw + gap);
+    const t: Box = { x, y: sb + (pd - td) / 2, w: tw, d: td, z: podiumFloors, floors: f, role: 'tower' };
     boxes.push(t);
     res.push({ box: t, units: u, upf: Math.ceil(u / f) });
   }
@@ -238,7 +246,7 @@ export function towerOnPodium(site: Site, mode: Mode, cap?: number | null): Alte
 /** ב: בלוק היקפי. דופן רחוב רציפה וחצר פנימית, גובה בינוני. */
 export function perimeterBlock(site: Site, mode: Mode, cap?: number | null): Alternative {
   const p = program(site, mode, cap);
-  const sb = ASSUMPTIONS.setbackM;
+  const sb = site.setback ?? ASSUMPTIONS.setbackM;
   const D = ASSUMPTIONS.barDepthM;
   const iw = site.L - 2 * sb, id = site.W - 2 * sb;
   const notes: string[] = [];
@@ -286,7 +294,7 @@ export function perimeterBlock(site: Site, mode: Mode, cap?: number | null): Alt
 /** ג: לוחות ונקודה. רבע מהדירות בגובה הרחוב, השאר במגדל אחד. */
 export function barsAndPoint(site: Site, mode: Mode, cap?: number | null): Alternative {
   const p = program(site, mode, cap);
-  const sb = ASSUMPTIONS.setbackM;
+  const sb = site.setback ?? ASSUMPTIONS.setbackM;
   const D = ASSUMPTIONS.barDepthM;
   const iw = site.L - 2 * sb, id = site.W - 2 * sb;
   const g = p.residentialM2 / p.units;

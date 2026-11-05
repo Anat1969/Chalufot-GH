@@ -39,9 +39,16 @@ export interface Site {
   planMix?: { small: number; medium: number } | null;
   /** המרה למפה. במתחם: המגרש המייצג ממורכז במתחם ובכיוון שלו. */
   frame?: Frame | null;
+  /** קו הבניין בתוך המלבן: 0 כשהמלבן כבר בתוך קווי הבניין. */
+  setback?: number;
+  /** שטח הבנייה לפי קווי הבניין, במסגרת המלבן. */
+  buildable?: [number, number][] | null;
+  setbacks?: Build['setbacks'] | null;
 }
 
-export interface PlanLot { lot: string; areaM2: number; residentialM2: number; units: number; floors: number | null; commerceM2: number; employmentM2: number; publicM2: number | null; residentialMainM2?: number; mix?: { small: number; medium: number }; ring: number[][] | null }
+export interface PlanLot { lot: string; areaM2: number; residentialM2: number; units: number; floors: number | null; commerceM2: number; employmentM2: number; publicM2: number | null; residentialMainM2?: number; mix?: { small: number; medium: number }; ring: number[][] | null; build?: Build | null }
+/** שטח הבנייה (scripts/buildable.py): מלבן מרבי בתוך קווי הבניין, מיושר לחזית. u,v במטרים מפינת המלבן. */
+export interface Build { lon: number; lat: number; ang: number; L: number; W: number; outline: [number, number][]; buildable: [number, number][]; setbacks: { m: number; line: string | null }[] }
 export interface Plan {
   id: string; number: string; name: string; status: string; districtId: number; level: 'lots' | 'compound';
   unitsExisting: number | null; unitsPlanned: number; isRenewal: boolean; openSpaceM2: number | null;
@@ -94,7 +101,10 @@ export function toLonLat(site: Pick<Site, 'L' | 'W' | 'frame'>, u: number, v: nu
 }
 
 export function siteFromLot(plan: Plan, lot: PlanLot): Site {
-  const r = lot.ring ? rectFromRing(lot.ring, lot.areaM2) : { L: Math.sqrt(lot.areaM2 * 2), W: Math.sqrt(lot.areaM2 / 2), outline: null, frame: null };
+  const b = lot.build;
+  const r = b
+    ? { L: b.L, W: b.W, outline: b.outline, frame: { lon0: b.lon, lat0: b.lat, kx: 111320 * Math.cos((b.lat * Math.PI) / 180), ky: 110540, ang: b.ang, cx: 0, cy: 0, swap: false } as Frame }
+    : lot.ring ? rectFromRing(lot.ring, lot.areaM2) : { L: Math.sqrt(lot.areaM2 * 2), W: Math.sqrt(lot.areaM2 / 2), outline: null, frame: null };
   const compound = plan.level === 'compound';
   const repeat = plan.repeat ?? 1;
   return {
@@ -106,6 +116,9 @@ export function siteFromLot(plan: Plan, lot: PlanLot): Site {
     // במתחם הגבול הוא של כל המתחם, לא של המגרש המייצג: משמש רק לכיוון.
     outline: compound ? null : r.outline,
     frame: r.frame,
+    setback: b ? 0 : undefined,
+    buildable: b?.buildable ?? null,
+    setbacks: b?.setbacks ?? null,
     districtId: plan.districtId,
     residentialM2: lot.residentialM2,
     units: lot.units,

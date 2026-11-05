@@ -10,6 +10,8 @@
 הרצה מקומית בלי רשת: python3 scripts/sync_plans.py --offline (קורא מ-scripts/fixtures).
 """
 import json, math, os, sys, urllib.request, datetime
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from buildable import buildable  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIX = os.path.join(ROOT, 'scripts', 'fixtures')
@@ -91,6 +93,8 @@ def bounds(rings):
 def mitar_plan(number, folder, pp_row, districts):
     seed = get(MITAR_RAW + folder + '/seed.json', 'seed.json')
     layers = get(MITAR_RAW + folder + '/layers.json', 'layers.json')
+    by = {l['kind']: l['geojson']['features'] for l in layers}
+    blines = [(f['properties'].get('name'), f['geometry']['coordinates']) for f in by.get('building_lines', []) if f['geometry']['type'] == 'LineString']
     lots, land = [], []
     for f in seed['lots']['features']:
         p = f['properties']
@@ -102,9 +106,10 @@ def mitar_plan(number, folder, pp_row, districts):
         other = {x['use']: x['builtM2'] or 0 for x in p['rights'] if x['use'] != 'מגורים'}
         lots.append({'lot': p['lot'], 'areaM2': r['lotArea'] or p['areaM2'], 'residentialM2': r['builtM2'], 'units': r['units'], 'floors': r['floors'],
                      'commerceM2': other.get('מסחר', 0), 'employmentM2': other.get('תעסוקה', 0) + other.get('מסחר ותעסוקה', 0),
-                     'publicM2': other.get('מבנים ומוסדות ציבור', 0), 'ring': rnd(ring)})
+                     'publicM2': other.get('מבנים ומוסדות ציבור', 0), 'ring': rnd(ring),
+                     # שטח הבנייה לפי קווי הבניין של התשריט, והמלבן המרבי בתוכו לאורך החזית
+                     'build': buildable(ring, blines)})
     lots.sort(key=lambda l: l['lot'])
-    by = {l['kind']: l['geojson']['features'] for l in layers}
     colors = {f['properties'].get('lot'): f['properties'].get('color') for f in by.get('land_use', [])}
     for l in land: l['color'] = colors.get(l['lot'])
     boundary = [rnd(r) for f in by.get('blue_line', []) for r in outer_rings(f)] or [rnd(r) for r in outer_rings(seed['boundary'])]
@@ -136,7 +141,9 @@ def model_plan(row, districts):
         lots.append({'lot': str(l['lot']), 'areaM2': l['lot_size'], 'residentialM2': res, 'units': l['units'], 'floors': l['floors_above'],
                      'commerceM2': com, 'employmentM2': 0, 'publicM2': None, 'residentialMainM2': l['residential_main'],
                      'mix': {'small': l['micro_55_min'], 'medium': l['small_75_min'] - l['micro_55_min']},
-                     'ring': rnd(env[l['lot']]) if l['lot'] in env else None})
+                     'ring': rnd(env[l['lot']]) if l['lot'] in env else None,
+                     # המעטפת מתכנון זמין היא כבר שטח הבנייה: בלי קו בניין נוסף
+                     'build': buildable(env[l['lot']], None, 0.0) if l['lot'] in env else None})
     boundary = [rnd(r) for f in m['boundary']['features'] for r in outer_rings(f)]
     s = m['sources']
     plan = {
