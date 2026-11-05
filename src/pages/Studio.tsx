@@ -94,7 +94,7 @@ export default function Studio() {
           <div className="kpi">
             <span className="kpi-q">כמה חלופות עוברות בדיקה?</span>
             <span className="kpi-v"><bdi className="num">{passing.length}</bdi><small> מתוך 3</small></span>
-            <Rich as="p" className="kpi-i">{passing.length ? `**${verified.filter((v) => v.verdict === 'warn').length}** מותנות בסעיף 4.1.5, **${verified.filter((v) => v.verdict === 'fail').length}** נחסמות` : `כל החלופות נחסמות, בעיקר ב**${topBlockRule?.title ?? ''}**`}</Rich>
+            <Rich as="p" className="kpi-i">{passing.length ? `**${verified.filter((v) => v.verdict === 'warn').length}** מותנות בהחלטת הוועדה, **${verified.filter((v) => v.verdict === 'fail').length}** נחסמות` : `כל החלופות נחסמות, בעיקר ב**${topBlockRule?.title ?? ''}**`}</Rich>
           </div>
           <div className="kpi">
             <span className="kpi-q">איזו חלופה מובילה?</span>
@@ -129,7 +129,7 @@ export default function Studio() {
                   const row = verified.map((v) => v.results.find((r) => r.id === id)!);
                   return (
                     <tr key={id} className={s.rule === id ? 'is-row' : s.rule ? 'is-dim' : ''} onClick={() => s.setRule(s.rule === id ? null : id)} tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && s.setRule(s.rule === id ? null : id)} aria-selected={s.rule === id}>
-                      <th scope="row"><bdi className="rid">{id}</bdi> {row[0].title}</th>
+                      <th scope="row">{row[0].title}</th>
                       {row.map((r, i) => <td key={i} className={`st st-${r.status} ${selected.alt.key === verified[i].alt.key ? 'is-sel' : ''}`} title={r.message}>{STATUS_LABEL[r.status]}</td>)}
                       <td className="cert">{CERTAINTY_LABEL[row[0].certainty]}</td>
                     </tr>
