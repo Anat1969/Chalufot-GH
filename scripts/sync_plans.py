@@ -162,6 +162,21 @@ def model_plan(row, districts):
     return plan, mp
 
 
+def rep_build(ring, area):
+    """המגרש המייצג בתוך גבול המתחם: מלבן בשטח המגרש, בתוך המלבן הגדול ביותר במתחם (קו בניין 3 מ' מגבול המתחם),
+    ובזווית שלו. בתוך המגרש המייצג, קו בניין של 3 מ' (הנחה)."""
+    b = buildable(ring, None, 3.0, min_short_m=24)
+    sb = 3.0
+    w = min(b['W'], math.sqrt(area / 1.6))
+    l = min(b['L'], area / w)
+    if l * w < area * 0.98: w = min(b['W'], area / l)
+    L, W = round(l - 2 * sb, 1), round(w - 2 * sb, 1)
+    return {'lon': b['lon'], 'lat': b['lat'], 'ang': b['ang'], 'L': L, 'W': W,
+            'outline': [[-sb, -sb], [L + sb, -sb], [L + sb, W + sb], [-sb, W + sb]],
+            'buildable': [[0, 0], [L, 0], [L, W], [0, W]],
+            'setbacks': [{'m': sb, 'line': None}] * 4, 'representative': True}
+
+
 def compound_plan(row, districts, gross_per_unit):
     rings = [rnd(r, 6) for f in (row.get('geojson') or {}).get('features', []) for r in outer_rings(f)]
     # תכנית בלי יח"ד מתוכננות (תעסוקה, נמל, תשתית): מחולל המגורים לא חל עליה. מדלגים, ולא נופלים.
@@ -179,7 +194,8 @@ def compound_plan(row, districts, gross_per_unit):
         'compoundM2': round(a), 'repeat': k,
         'source': 'גבול ויח"ד מתוכננות מ"מה נבנה סביבי" (plan_projects). אין טבלת זכויות', 'sourceApp': 'מה נבנה סביבי', 'sourceUrl': NIVNE + '/',
         'lots': [{'lot': 'מייצג', 'areaM2': round(a * NET_SHARE / k), 'residentialM2': u * gross_per_unit, 'units': u, 'floors': None,
-                  'commerceM2': 0, 'employmentM2': 0, 'publicM2': None, 'ring': main}],
+                  'commerceM2': 0, 'employmentM2': 0, 'publicM2': None, 'ring': main,
+                  'build': rep_build(main, a * NET_SHARE / k)}],
     }
     mp = {'boundary': rings, 'land': [], 'buildings': [], 'proposed': [], 'lines': [], 'credit': 'גבול המתחם מ"מה נבנה סביבי". בניינים קיימים: מפת הרקע'}
     return plan, mp

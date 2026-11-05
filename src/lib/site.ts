@@ -44,11 +44,13 @@ export interface Site {
   /** שטח הבנייה לפי קווי הבניין, במסגרת המלבן. */
   buildable?: [number, number][] | null;
   setbacks?: Build['setbacks'] | null;
+  /** מגרש מייצג של מתחם, לא מגרש אמיתי מטבלה 5. */
+  representative?: boolean;
 }
 
 export interface PlanLot { lot: string; areaM2: number; residentialM2: number; units: number; floors: number | null; commerceM2: number; employmentM2: number; publicM2: number | null; residentialMainM2?: number; mix?: { small: number; medium: number }; ring: number[][] | null; build?: Build | null }
 /** שטח הבנייה (scripts/buildable.py): מלבן מרבי בתוך קווי הבניין, מיושר לחזית. u,v במטרים מפינת המלבן. */
-export interface Build { lon: number; lat: number; ang: number; L: number; W: number; outline: [number, number][]; buildable: [number, number][]; setbacks: { m: number; line: string | null }[] }
+export interface Build { lon: number; lat: number; ang: number; L: number; W: number; outline: [number, number][]; buildable: [number, number][]; setbacks: { m: number; line: string | null }[]; representative?: boolean }
 export interface Plan {
   id: string; number: string; name: string; status: string; districtId: number; level: 'lots' | 'compound';
   unitsExisting: number | null; unitsPlanned: number; isRenewal: boolean; openSpaceM2: number | null;
@@ -114,7 +116,8 @@ export function siteFromLot(plan: Plan, lot: PlanLot): Site {
     areaM2: lot.areaM2,
     L: +r.L.toFixed(1), W: +r.W.toFixed(1),
     // במתחם הגבול הוא של כל המתחם, לא של המגרש המייצג: משמש רק לכיוון.
-    outline: compound ? null : r.outline,
+    outline: compound && !b ? null : r.outline,
+    representative: compound,
     frame: r.frame,
     setback: b ? 0 : undefined,
     buildable: b?.buildable ?? null,
