@@ -23,7 +23,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Read all sources and rebuild plans
-        run: python3 scripts/sync_plans.py
+        run: python3 scripts/sync_plans.py | tee sync.log
       - name: Anything changed?
         id: diff
         run: |
@@ -53,3 +53,4 @@ jobs:
         run: |
           python3 -c "import json;d=json.load(open('src/data/plans.json'));print('snapshot',d['snapshot'],'plans',len(d['plans']),'lots',sum(len(p['lots']) for p in d['plans']))" >> "$GITHUB_STEP_SUMMARY"
           echo "changed: ${{ steps.diff.outputs.changed }}" >> "$GITHUB_STEP_SUMMARY"
+          grep '^skipped:' sync.log >> "$GITHUB_STEP_SUMMARY" || true
