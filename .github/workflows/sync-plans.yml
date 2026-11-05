@@ -48,7 +48,13 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/data/plans.json public/maps app
           git commit -m "סנכרון לילי: תכניות מתואם מתאר ומ\"מה נבנה סביבי\""
-          git push
+          # workflow אחר (build-app) עלול לדחוף ל-main באותו רגע: מושכים, מעבירים את הקומיט מעליו, ומנסים שוב.
+          for i in 1 2 3; do
+            if git push; then exit 0; fi
+            git pull --rebase -X theirs origin main
+            sleep $((i * 5))
+          done
+          exit 1
       - name: Summary
         run: |
           python3 -c "import json;d=json.load(open('src/data/plans.json'));print('snapshot',d['snapshot'],'plans',len(d['plans']),'lots',sum(len(p['lots']) for p in d['plans']))" >> "$GITHUB_STEP_SUMMARY"
