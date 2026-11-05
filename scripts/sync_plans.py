@@ -29,7 +29,11 @@ def get(url, fixture):
     if OFFLINE:
         with open(os.path.join(FIX, fixture), encoding='utf-8') as f:
             return json.load(f)
-    req = urllib.request.Request(url, headers={'apikey': ANON, 'Authorization': f'Bearer {ANON}', 'User-Agent': 'chalufot-sync'})
+    # מפתח Supabase נשלח רק ל-Supabase: GitHub מחזיר 404 על כותרת הרשאה שאינה שלו.
+    headers = {'User-Agent': 'chalufot-sync'}
+    if url.startswith(SUPA):
+        headers.update({'apikey': ANON, 'Authorization': f'Bearer {ANON}'})
+    req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=60) as r:
         return json.loads(r.read().decode('utf-8'))
 
