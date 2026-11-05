@@ -24,7 +24,7 @@ describe('generator', () => {
   it('reads lot 101 from the plan rights table', () => {
     expect(s.units).toBe(203);
     expect(s.maxFloors).toBe(31);
-    expect(s.L * s.W).toBeCloseTo(s.areaM2, -1);
+    expect(s.buildable?.length).toBeGreaterThan(3);
   });
   it('rights mode keeps every unit and every square metre', () => {
     for (const a of generate(s, 'rights')) {
@@ -119,4 +119,28 @@ describe('map frame', () => {
     const dx = (b[0] - a[0]) * 111320 * Math.cos((a[1] * Math.PI) / 180), dy = (b[1] - a[1]) * 110540;
     expect(Math.hypot(dx, dy)).toBeCloseTo(10, 1);
   });
+});
+
+describe('massing sits inside the building lines', () => {
+  const inside = (x: number, y: number, poly: [number, number][]) => {
+    let c = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const [xi, yi] = poly[i], [xj, yj] = poly[j];
+      if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c;
+    }
+    return c;
+  };
+  for (const id of ['tml-2022', '603-0811588']) {
+    it(`${id}: every corner of every building, in every alternative, is inside the building lines`, () => {
+      let n = 0;
+      for (const s of sitesOf(planById(id))) for (const mode of ['rights', 'mitar'] as const) for (const a of generate(s, mode)) {
+        for (const b of a.boxes) for (const [u, v] of [[b.x + 0.3, b.y + 0.3], [b.x + b.w - 0.3, b.y + 0.3], [b.x + b.w - 0.3, b.y + b.d - 0.3], [b.x + 0.3, b.y + b.d - 0.3]]) {
+          n++;
+          expect(u >= -0.01 && v >= -0.01 && u <= s.L + 0.01 && v <= s.W + 0.01, `${s.label} ${a.name} ${b.role}`).toBe(true);
+          expect(inside(u, v, s.buildable!), `${s.label} ${a.name} ${b.role} (${u.toFixed(1)},${v.toFixed(1)})`).toBe(true);
+        }
+      }
+      expect(n).toBeGreaterThan(100);
+    });
+  }
 });

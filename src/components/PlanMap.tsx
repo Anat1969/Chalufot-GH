@@ -71,8 +71,8 @@ export default function PlanMap({ planId, checked, selected, site, alt, onPick, 
     const fb = zoomed && focus ? [Math.min(...focus.map((p) => p[0])), Math.min(...focus.map((p) => p[1])), Math.max(...focus.map((p) => p[0])), Math.max(...focus.map((p) => p[1]))] : data.bounds;
     const [x0, y0, x1, y1] = fb;
     let minX = mx(x0, Z), maxX = mx(x1, Z), minY = my(y1, Z), maxY = my(y0, Z);
-    // במגרש: הסביבה בגודל פעם וחצי המגרש מכל צד, כדי לראות את הרחוב והבניינים הסמוכים.
-    const pad = zoomed ? Math.max(maxX - minX, maxY - minY) * 1.5 + 60 : Math.max(maxX - minX, maxY - minY) * 0.12 + 40;
+    // במגרש: חצי מגודל המגרש מכל צד. רואים את קווי הבניין, הרחוב והבניינים הסמוכים.
+    const pad = zoomed ? Math.max(maxX - minX, maxY - minY) * 0.45 + 30 : Math.max(maxX - minX, maxY - minY) * 0.12 + 40;
     minX -= pad; maxX += pad; minY -= pad; maxY += pad;
     // הרחבה לפרופורציה של המסגרת: המפה ממלאת אותה, בלי שוליים מתים.
     let w = maxX - minX, h = maxY - minY;
@@ -134,7 +134,8 @@ export default function PlanMap({ planId, checked, selected, site, alt, onPick, 
         {data?.land.length ? <span><i className="sw sw-res" />ייעוד מגורים</span> : null}
         {data?.land.length ? <span><i className="sw sw-pub" />ציבורי ושצ"פ</span> : null}
         {checked.some((c) => c.verdict) && <span><i className="sw sw-v" />צבע המגרש: תוצאת החלופה החסינה</span>}
-        {hasDemolish && <span><i className="sw sw-demolish" />מבנה להריסה</span>}
+        {data?.lines.length ? <span><i className="sw sw-line" />קו בניין</span> : null}
+        {hasDemolish && <span><i className="sw sw-demolish" />מבנה קיים להריסה</span>}
         {hasExisting && <span><i className="sw sw-existing" />בניין קיים</span>}
         {repLot && <span><i className="sw sw-rep" />מגרש מייצג</span>}
         {footprints.length > 0 && <span><i className="sw sw-alt" />נפחי החלופה שנבדקת</span>}

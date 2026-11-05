@@ -343,10 +343,10 @@ ai-menu { display: block; min-width: 40px; min-height: 36px; }
 .pm-land.is-pick { cursor: pointer; transition: fill-opacity .15s; }
 .pm-land.is-pick:hover { fill-opacity: .95; }
 .pm-land.is-sel { stroke-width: 3; fill-opacity: .25; }
-.pm-line { fill: none; stroke: var(--breach); stroke-width: .8; stroke-dasharray: 3 2; vector-effect: non-scaling-stroke; opacity: .7; }
+.pm-line { fill: none; stroke: var(--breach); stroke-width: 1.1; stroke-dasharray: 6 2 1 2; vector-effect: non-scaling-stroke; opacity: .85; }
 .pm-bld { stroke-width: .6; vector-effect: non-scaling-stroke; }
 .pm-existing { fill: #9B9890; stroke: #6E6B64; fill-opacity: .55; }
-.pm-demolish { fill: none; stroke: var(--breach); stroke-dasharray: 2 2; }
+.pm-demolish { fill: rgba(110, 107, 100, .12); stroke: #6E6B64; stroke-dasharray: 1 1.5; }
 .pm-proposed { fill: #FFFFFF; fill-opacity: .55; stroke: var(--ink); stroke-width: .7; stroke-dasharray: 3 2; vector-effect: non-scaling-stroke; }
 .pm-boundary { fill: none; stroke: var(--blueline); stroke-width: 2.2; vector-effect: non-scaling-stroke; }
 .pm-rep { fill: rgba(255, 255, 255, .6); stroke: var(--ink); stroke-width: 1.2; stroke-dasharray: 5 3; vector-effect: non-scaling-stroke; }
@@ -359,7 +359,8 @@ ai-menu { display: block; min-width: 40px; min-height: 36px; }
 .sw-res { background: #F6D26B; }
 .sw-pub { background: linear-gradient(90deg, #C8A27A 50%, #9FD39A 50%); }
 .sw-v { background: linear-gradient(90deg, var(--permit) 33%, var(--amber) 33% 66%, var(--breach) 66%); }
-.sw-demolish { border: 1.5px dashed var(--breach); }
+.sw-demolish { border: 1.5px dotted #6E6B64; background: rgba(110, 107, 100, .12); }
+.sw-line { border-top: 2px dashed var(--breach); height: 0; }
 .sw-existing { background: #9B9890; }
 .sw-rep { border: 1.5px dashed var(--ink); }
 .sw-alt { background: var(--ink); }
@@ -388,3 +389,6 @@ ai-menu { display: block; min-width: 40px; min-height: 36px; }
 @media (max-width: 760px) {
   .chapter { grid-template-columns: minmax(0, 1fr); gap: 6px; }
 }
+.plan-bline { fill: none; stroke: var(--breach); stroke-width: .45; stroke-dasharray: 1.5 1; }
+.sw-bline { border: 1.5px dashed var(--breach); }
+.sw-setback { border: 1px dashed var(--blueline); }

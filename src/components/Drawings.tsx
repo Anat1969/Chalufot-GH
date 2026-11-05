@@ -15,6 +15,7 @@ export function isoBounds(site: Site, alts: Alternative[]) {
   const xs: number[] = [], ys: number[] = [];
   const push = (x: number, y: number, z: number) => { const [a, b] = iso(x, y, z); xs.push(a); ys.push(b); };
   push(0, 0, 0); push(site.L, 0, 0); push(0, site.W, 0); push(site.L, site.W, 0);
+  for (const [u, v] of site.outline ?? []) push(u, v, 0);
   for (const a of alts) for (const b of a.boxes) push(b.x, b.y, top(b));
   const pad = 6;
   return { x: Math.min(...xs) - pad, y: Math.min(...ys) - pad, w: Math.max(...xs) - Math.min(...xs) + 2 * pad, h: Math.max(...ys) - Math.min(...ys) + 2 * pad };
@@ -23,9 +24,14 @@ export function isoBounds(site: Site, alts: Alternative[]) {
 /** איזומטריה: הנפחים צומחים מהקרקע (מחלקת grow), תוחם משותף כדי שהשוואה בין חלופות תהיה בקנה מידה אחד. */
 export function Iso({ site, alt, bounds, verdict, compact = false, label }: { site: Site; alt: Alternative; bounds: ReturnType<typeof isoBounds>; verdict?: Verdict; compact?: boolean; label?: string }) {
   const order = [...alt.boxes].sort((a, b) => a.x + a.y + a.w + a.d - (b.x + b.y + b.w + b.d) || base(a) - base(b));
-  const ground: [number, number][] = [iso(0, 0, 0), iso(site.L, 0, 0), iso(site.L, site.W, 0), iso(0, site.W, 0)];
-  const sb = ASSUMPTIONS.setbackM;
-  const setback: [number, number][] = [iso(sb, sb, 0), iso(site.L - sb, sb, 0), iso(site.L - sb, site.W - sb, 0), iso(sb, site.W - sb, 0)];
+  // הקרקע היא המגרש האמיתי כשהוא ידוע, וקו הבניין הוא שטח הבנייה לפי התשריט.
+  const ground: [number, number][] = site.outline && site.buildable
+    ? site.outline.map(([u, v]) => iso(u, v, 0))
+    : [iso(0, 0, 0), iso(site.L, 0, 0), iso(site.L, site.W, 0), iso(0, site.W, 0)];
+  const sb = site.setback ?? ASSUMPTIONS.setbackM;
+  const setback: [number, number][] = site.buildable
+    ? site.buildable.map(([u, v]) => iso(u, v, 0))
+    : [iso(sb, sb, 0), iso(site.L - sb, sb, 0), iso(site.L - sb, site.W - sb, 0), iso(sb, site.W - sb, 0)];
   return (
     <svg className={`iso v-${verdict ?? 'none'}`} viewBox={`${bounds.x} ${bounds.y} ${bounds.w} ${bounds.h}`} role="img" aria-label={label ?? `${alt.name}: ${alt.maxFloors} קומות, ${alt.units} יח"ד`} style={{ direction: 'ltr' }}>
       <polygon points={pts(ground)} className="iso-lot" />
@@ -54,13 +60,18 @@ export function Iso({ site, alt, bounds, verdict, compact = false, label }: { si
 /** תכנית: המגרש האמיתי (כחול־קו), קו בניין, טביעת רגל ושטח פתוח. */
 export function PlanView({ site, alt }: { site: Site; alt: Alternative }) {
   const pad = 4;
-  const sb = ASSUMPTIONS.setbackM;
+  const sb = site.setback ?? ASSUMPTIONS.setbackM;
+  const real = !!(site.outline && site.buildable);
+  const all = [[0, 0], [site.L, site.W], ...(site.outline ?? [])];
+  const x0 = Math.min(...all.map((p) => p[0])), y0 = Math.min(...all.map((p) => p[1]));
+  const x1 = Math.max(...all.map((p) => p[0])), y1 = Math.max(...all.map((p) => p[1]));
   return (
     <figure className="drawing">
-      <svg viewBox={`${-pad} ${-pad} ${site.L + 2 * pad} ${site.W + 2 * pad}`} role="img" aria-label={`תכנית: תכסית ${Math.round(alt.coverage * 100)}%`} style={{ direction: 'ltr' }}>
-        <rect x={0} y={0} width={site.L} height={site.W} className="plan-lot" />
-        {site.outline && <polygon points={pts(site.outline)} className="plan-outline" />}
-        <rect x={sb} y={sb} width={site.L - 2 * sb} height={site.W - 2 * sb} className="plan-setback" />
+      <svg viewBox={`${x0 - pad} ${y0 - pad} ${x1 - x0 + 2 * pad} ${y1 - y0 + 2 * pad}`} role="img" aria-label={`תכנית: תכסית ${Math.round(alt.coverage * 100)}%`} style={{ direction: 'ltr' }}>
+        {real ? <polygon points={pts(site.outline!)} className="plan-lot" /> : <rect x={0} y={0} width={site.L} height={site.W} className="plan-lot" />}
+        {!real && site.outline && <polygon points={pts(site.outline)} className="plan-outline" />}
+        {real ? <polygon points={pts(site.buildable!)} className="plan-bline" /> : <rect x={sb} y={sb} width={site.L - 2 * sb} height={site.W - 2 * sb} className="plan-setback" />}
+        {real && <rect x={0} y={0} width={site.L} height={site.W} className="plan-setback" />}
         {alt.boxes.filter((b) => b.z === 0).map((b, i) => <rect key={i} x={b.x} y={b.y} width={b.w} height={b.d} className={`plan-fp role-${b.role}`} />)}
         {alt.boxes.filter((b) => b.z > 0).map((b, i) => <rect key={'u' + i} x={b.x} y={b.y} width={b.w} height={b.d} className={`plan-up role-${b.role}`} />)}
       </svg>
@@ -68,7 +79,8 @@ export function PlanView({ site, alt }: { site: Site; alt: Alternative }) {
         <span><i className="sw sw-fp" />טביעת רגל</span>
         <span><i className="sw sw-up" />נפח על המסד</span>
         <span><i className="sw sw-lot" />גבול המגרש</span>
-        {site.outline && <span><i className="sw sw-outline" />צורת המגרש האמיתית</span>}
+        {real ? <span><i className="sw sw-bline" />קווי הבניין מהתשריט</span> : site.outline && <span><i className="sw sw-outline" />צורת המגרש האמיתית</span>}
+        {real && <span><i className="sw sw-setback" />מלבן הבנייה המרבי</span>}
       </figcaption>
     </figure>
   );
